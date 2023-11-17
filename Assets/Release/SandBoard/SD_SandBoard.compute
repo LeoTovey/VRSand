@@ -1,0 +1,299 @@
+
+#pragma kernel  Init                     
+#pragma kernel  CollisionTest            
+#pragma kernel  DisplacementVertical     
+#pragma kernel  DisplacementHorizontal   
+#pragma kernel  Displacement             
+//#pragma kernel  PreComputeSlope          
+//#pragma kernel  ComputeSlope             
+#pragma kernel  Erosion                  
+#pragma kernel  SkinnyPouring        
+#pragma kernel  ScatterPouring        
+
+#define off_T   uint2(0,1);
+#define off_B   uint2(0,-1);
+#define off_L   uint2(-1,0);
+#define off_R   uint2(1,0);
+
+RWTexture2D<float>  Collision;
+RWTexture2D<float4> Height;
+RWTexture2D<float4> OldHeight;
+RWTexture2D<float4> DisplacementHeight;
+RWTexture2D<float4> DisplacementHeightX;
+RWTexture2D<float4> DisplacementHeightY;
+Texture2D<float> InitMap;
+
+uint    DisplacementRaw;
+uint    DisplacementColumn;
+uint    NextDisplacementRaw; 
+uint    NextDisplacementColumn;
+
+uint2   StartId;
+uint2   HeightMapSize;
+uint2   CollisionMapSize;
+
+float   MaxHeight;
+float   InitHeight;
+
+
+float2  DisplacementRatio;
+float3  InitColor;
+
+float2  SandCenter;
+float   SandRadius;
+float4  SandAmount;
+
+
+
+
+float slopeThreshold;
+
+//#define one_third 0.33333;
+
+
+[numthreads(8,8,1)]
+void Init (uint3 DispatchThreadID : SV_DispatchThreadID)
+{
+    //float rgbSum = InitColor.r + InitColor.g + InitColor.b;
+    //float rSand = InitHeight * InitColor.r / rgbSum;
+    //float gSand = InitHeight * InitColor.g / rgbSum;
+    //float bSand = InitHeight * InitColor.b / rgbSum;
+    float4 pixel = InitMap.Load(int3(DispatchThreadID.xy, 0));
+    if (pixel.r < 0.8)
+    {
+        Height[DispatchThreadID.xy] = float4(0.0, 0.0, 0.0, 1.0 - pixel.r);
+    }
+    //Height[DispatchThreadID.xy] = float4(0.0, 0.0, 0.0, 0.4);
+    DisplacementHeightX[DispatchThreadID.xy] = 0;
+    DisplacementHeightY[DispatchThreadID.xy] = 0;
+}
+
+[numthreads(8, 8, 1)]
+void CollisionTest(uint3 DispatchThreadID : SV_DispatchThreadID)
+{
+    uint2 id = uint2(DispatchThreadID.x + StartId.x, DispatchThreadID.y + StartId.y);
+    uint2 collisonMapId = uint2(id.x, CollisionMapSize.y - id.y - 1);
+    float collisionTag = Collision[collisonMapId];
+
+    if (collisionTag > 0.0001)
+    {
+        float4 height = Height[id];
+        DisplacementHeightY[id] = height * DisplacementRatio.y;
+        DisplacementHeightX[id] = height * DisplacementRatio.x;
+        Height[id] = 0;
+    }
+
+}
+
+
+
+[numthreads(8,1,1)]
+ void DisplacementVertical (uint3 DispatchThreadID : SV_DispatchThreadID, uint3 GroupID : SV_GroupID)
+ {
+    uint2 id = uint2(DispatchThreadID.x + StartId.x, DisplacementRaw);
+    uint2 nextId = uint2(DispatchThreadID.x + StartId.x, NextDisplacementRaw);
+    uint2 collisonMapId = uint2(id.x, CollisionMapSize.y - id.y - 1);
+    if (Collision[collisonMapId] > 0.0)
+    {
+        DisplacementHeightY[nextId] += DisplacementHeightY[id];
+        DisplacementHeightY[id] = 0;
+    }
+ }
+
+ [numthreads(1,8,1)]
+ void DisplacementHorizontal (uint3 DispatchThreadID : SV_DispatchThreadID, uint3 GroupID : SV_GroupID)
+ {
+    uint2 id = uint2(DisplacementColumn, DispatchThreadID.y + StartId.y);
+    uint2 nextId = uint2(NextDisplacementColumn, DispatchThreadID.y + StartId.y);
+    uint2 collisonMapId = uint2(id.x, CollisionMapSize.y - id.y - 1);
+    if (Collision[collisonMapId] > 0.0)
+    {
+        DisplacementHeightX[nextId] += DisplacementHeightX[id];
+        DisplacementHeightX[id] = 0;
+    }
+ }
+
+ [numthreads(8,8,1)]
+ void Displacement(uint3 DispatchThreadID : SV_DispatchThreadID, uint3 GroupID : SV_GroupID)
+ {
+    uint2 id = uint2(DispatchThreadID.x + StartId.x, DispatchThreadID.y + StartId.y);
+    Height[id] += DisplacementHeightY[id] + DisplacementHeightX[id];
+    Height[id] = clamp(Height[id], 0.0, MaxHeight);
+    DisplacementHeightY[id] = 0;
+    DisplacementHeightX[id] = 0;
+ }
+
+ [numthreads(8, 8, 1)]
+ void Erosion(uint3 id : SV_DispatchThreadID, uint3 GroupID : SV_GroupID)
+ {
+    float4 currentPixel = Height[id.xy];
+    float threshold = 0.1; 
+    float4 sum = currentPixel;
+    int count = 1;
+
+    for (int x = -1; x <= 1; x++) 
+    {
+        for (int y = -1; y <= 1; y++) 
+        {
+            uint2 neighborCoord = id.xy + uint2(x, y);
+            if (x != 0 || y != 0) 
+            {
+                float4 neighbor = Height[neighborCoord];
+                float diff = length(neighbor - currentPixel);
+                if (diff > threshold) 
+                {
+                    sum += neighbor;
+                    count++;
+                }
+            }
+        }
+    }
+
+    Height[id.xy] = sum / count;
+
+ }
+
+
+ /*
+ [numthreads(8, 8, 1)]
+ void PreComputeSlope(uint3 DispatchThreadID : SV_DispatchThreadID, uint3 GroupID : SV_GroupID)
+ {
+     uint2 id = uint2(DispatchThreadID.x, DispatchThreadID.y);
+     OldHeight[id] = Height[id];
+     DisplacementHeight[id] = float4(0, 0, 0, 0);
+ }
+
+
+ [numthreads(8, 8, 1)]
+ void ComputeSlope(uint3 DispatchThreadID : SV_DispatchThreadID, uint3 GroupID : SV_GroupID)
+ {
+     uint2 id = uint2(DispatchThreadID.x, DispatchThreadID.y);
+     uint2 id_T = id + off_T;
+     uint2 id_B = id + off_B;
+     uint2 id_L = id + off_L;
+     uint2 id_R = id + off_R;
+
+     float4 height = Height[id];
+     float4 height_DT = height - Height[id_T];
+     float4 height_DB = height - Height[id_B];
+     float4 height_DL = height - Height[id_L];
+     float4 height_DR = height - Height[id_R];
+
+     float s_T = atan(height_DT.w);
+     float s_B = atan(height_DB.w);
+     float s_L = atan(height_DL.w);
+     float s_R = atan(height_DR.w);
+
+     bool slope_T = false;
+     bool slope_B = false;
+     bool slope_L = false;
+     bool slope_R = false;
+     uint slope_count = 0;
+     float4 slope_height = float4(0, 0, 0, 0);
+
+     if (s_T > slopeThreshold)
+     {
+         slope_T = true;
+         slope_count += 1;
+         slope_height += height_DT;
+     }
+
+     if (s_B > slopeThreshold)
+     {
+         slope_B = true;
+         slope_count += 1;
+         slope_height += height_DB;
+     }
+
+     if (s_L > slopeThreshold)
+     {
+         slope_L = true;
+         slope_count += 1;
+         slope_height += height_DL;
+     }
+
+     if (s_R > slopeThreshold)
+     {
+         slope_R = true;
+         slope_count += 1;
+         slope_height += height_DR;
+     }
+
+
+     if (slope_count > 0)
+     {
+         float4 delta_height = slope_height / slope_count;
+         delta_height /= slope_count;
+
+         float4 displacementHeight = float4(0, 0, 0, 0);
+
+         if (s_T > slopeThreshold)
+         {
+             displacementHeight.x = delta_height;
+         }
+
+         if (s_B > slopeThreshold)
+         {
+             displacementHeight.y = delta_height;
+         }
+
+         if (s_L > slopeThreshold)
+         {
+             displacementHeight.z = delta_height;
+         }
+
+         if (s_R > slopeThreshold)
+         {
+             displacementHeight.w = delta_height;
+         }
+
+         DisplacementHeight[id] = displacementHeight;
+     }
+ }
+
+
+
+ [numthreads(8, 8, 1)]
+ void Erosion(uint3 DispatchThreadID : SV_DispatchThreadID, uint3 GroupID : SV_GroupID)
+ {
+     uint2 id = uint2(DispatchThreadID.x, DispatchThreadID.y);
+     uint2 id_T = id + off_T;
+     uint2 id_B = id + off_B;
+     uint2 id_L = id + off_L;
+     uint2 id_R = id + off_R;
+
+
+     float4 height = Height[id];
+     float4 height_DT = height - Height[id_T];
+     float4 height_DB = height - Height[id_B];
+     float4 height_DL = height - Height[id_L];
+     float4 height_DR = height - Height[id_R];
+
+ }
+
+ */
+
+
+
+ [numthreads(8, 8, 1)]
+ void SkinnyPouring(uint3 DispatchThreadID : SV_DispatchThreadID, uint3 GroupID : SV_GroupID)
+ {
+    uint2 id = uint2(DispatchThreadID.x + StartId.x, DispatchThreadID.y + StartId.y);
+    float dist = distance(SandCenter, id);
+    float power = saturate(1.0 - dist / SandRadius);
+    Height[id] += SandAmount * power;
+    Height[id] = clamp(Height[id], 0.0, MaxHeight);
+ }
+
+ [numthreads(8, 8, 1)]
+ void ScatterPouring(uint3 DispatchThreadID : SV_DispatchThreadID, uint3 GroupID : SV_GroupID)
+ {
+    uint2 id = uint2(DispatchThreadID.x + StartId.x, DispatchThreadID.y + StartId.y);
+    float dist = distance(id, SandCenter);
+    float power = saturate(1.0 - dist / SandRadius);
+    Height[id] += SandAmount * power;
+    Height[id] = clamp(Height[id], 0.0, MaxHeight);
+ }
+
+
+

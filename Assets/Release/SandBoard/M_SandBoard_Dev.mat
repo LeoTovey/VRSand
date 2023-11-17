@@ -1,0 +1,63 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: M_SandBoard_Dev
+  m_Shader: {fileID: 4800000, guid: e71651a26230daf4195b131b09cb478c, type: 3}
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _CollisionMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DisplacementHeightMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _GranularMap02:
+        m_Texture: {fileID: 2800000, guid: b8488e2d7b0e4b14cb9a276501076bc0, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _GranularMap04:
+        m_Texture: {fileID: 2800000, guid: 1f17db618da110242b6f28547eb2b634, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _GranularMap06:
+        m_Texture: {fileID: 2800000, guid: 73c00a3a2081db246bca746f09d30745, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _GranularMap08:
+        m_Texture: {fileID: 2800000, guid: 9dc76016bfdddc140954f3d6b6769636, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _HeightMap:
+        m_Texture: {fileID: 8400000, guid: fedc2acf3339d884e95f05d21e37ef6d, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _HeightMap_TexelSize: 1
+    - _HeightMap_TexelSize_X: 0.0005
+    - _HeightMap_TexelSize_Y: 0.0005
+    - _InitHeight: 1
+    - _ParallaxScale: 0.001
+    m_Colors:
+    - _BackGround: {r: 0.9607843, g: 0.87058824, b: 0.7019608, a: 1}
+    - _GlowColor: {r: 1, g: 1, b: 0, a: 1}
+    - _SandColor: {r: 0.5566038, g: 0.46639156, b: 0.35006526, a: 1}
+    - _SandGround: {r: 0.4433962, g: 0.3587429, b: 0.24958465, a: 1}
+  m_BuildTextureStacks: []

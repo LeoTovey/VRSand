@@ -22,26 +22,20 @@ public class SandSimulation : MonoBehaviour
     public Pen Pen;
     public TextMeshProUGUI testMesh;
 
-    private int collisionMapWidth => Kernel.MapWidth;
-    private int collisionMapHeight => Kernel.MapHeight;
 
     public RawImage ColorHandleImage;
     public Color SandColor;
-    public ParticleSystem SkinnySand;
 
     public Transform CollisionPlane;
 
     [SerializeField] private SandScatterPouring _sandScatterPouring;
+    [SerializeField] private SandSkinnyPouring _sandSkinnyPouring;
 
     // for simulation
     public float InitHeight = 0.5f;
     public float MaxHeight = 1.0f;
     public Color InitColor;
 
-    private float MaxStrength = 0.06f;
-    private float MinStrength = 0.02f;
-    private float SkinnySandVelocity = 0.5f;
-    private float ScatterSandVelocity = 0.04f;
     private int SandRadius = 5;
 
     private Vector3 _collisionPlaneScale => CollisionPlane.lossyScale;
@@ -53,7 +47,6 @@ public class SandSimulation : MonoBehaviour
     private float _planeMaxX => _collisionPlaneCenter.x + _halfWidth;
     private float _planeMaxZ => _collisionPlaneCenter.z + _halfHeight;
 
-    private float[] _sandAmount = new float[4];
 
 
     private void Awake()
@@ -65,11 +58,6 @@ public class SandSimulation : MonoBehaviour
     {
         _collisions.Add(Hands[0]);
         _collisions.Add(Hands[1]);
-
-        Hands[1].BindHandPoseEndCallback(HandPose.SkinnyPouring, () =>
-        {
-            SkinnySand.gameObject.SetActive(false);
-        });
 
 
     }
@@ -117,39 +105,21 @@ public class SandSimulation : MonoBehaviour
 
         if (Hands[1].CurrentHandPose == HandPose.SkinnyPouring && Hands[1].CurrentHandStatus == HandStatus.Draw)
         {
-            float Strength = Hands[1].Strength;
-            float SandStrength = Mathf.InverseLerp(MinStrength, MaxStrength, Strength);
-            Vector3 skinnyPouringCenter = Hands[1].SkinnyPouringCenter;
-            SkinnySand.gameObject.transform.position = skinnyPouringCenter;
 
-            var main = SkinnySand.main;
-            main.simulationSpeed = SandStrength;
-            //Color color = ColorHandleImage.color;
-            Color color = SandColor;
-            color.a = SandStrength;
-            main.startColor = color;
 
-            if (SandStrength > 0.0f)
+            if (_sandSkinnyPouring.Strenth > 0.0f)
             {
-                SkinnySand.gameObject.SetActive(true);
+ 
                 Bounds bounds = Hands[1].HandBound;
 
                 if (IsIntersectXZ(bounds))
                 { 
-
-                    _sandAmount[3] = (color.r + color.g + color.b) * SandStrength * SkinnySandVelocity;
-                    _sandAmount[0] = color.r * SandStrength * SkinnySandVelocity;
-                    _sandAmount[1] = color.g * SandStrength * SkinnySandVelocity;
-                    _sandAmount[2] = color.b * SandStrength * SkinnySandVelocity;
-
-                    Kernel.SkinnyPouring(bounds, CollisionPlane, skinnyPouringCenter, _sandAmount, SandRadius);
+ 
+                    Kernel.SkinnyPouring(bounds, CollisionPlane, _sandSkinnyPouring.PouringCenter, _sandSkinnyPouring.SandAmount, SandRadius);
 
                 }
             }
-            else
-            {
-                SkinnySand.gameObject.SetActive(false);
-            }
+
         }
         else if(Hands[1].CurrentHandPose == HandPose.ScatterPouring && Hands[1].CurrentHandStatus == HandStatus.Draw)
         {
@@ -161,12 +131,9 @@ public class SandSimulation : MonoBehaviour
                 Bounds bounds = Hands[1].ScatterPouringCenter;
                 if (IsIntersectXZ(bounds))
                 {
-                    _sandAmount[3] = (color.r + color.g + color.b) * _sandScatterPouring.Strenth * ScatterSandVelocity;
-                    _sandAmount[0] = color.r * _sandScatterPouring.Strenth * ScatterSandVelocity;
-                    _sandAmount[1] = color.g * _sandScatterPouring.Strenth * ScatterSandVelocity;
-                    _sandAmount[2] = color.b * _sandScatterPouring.Strenth * ScatterSandVelocity;
 
-                    Kernel.ScatterPouring(bounds, CollisionPlane, _sandAmount);
+
+                    Kernel.ScatterPouring(bounds, CollisionPlane, _sandScatterPouring.SandAmount);
 
                 }
 

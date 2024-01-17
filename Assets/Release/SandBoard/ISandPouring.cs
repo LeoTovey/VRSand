@@ -18,4 +18,6 @@ public interface ISandPouring
 
     bool Enabled { get; }
 
+    float[] SandAmount { get; }
+
 }

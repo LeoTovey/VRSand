@@ -67,9 +67,11 @@ public class Hand : MonoBehaviour, ICollision
     private Vector3 _lastIndexFingerTipPosition;
 
     private HandJointLocations _handJointLocations = new HandJointLocations();
+
     private Dictionary<HandPose, Action> _onHandPoseStart = new Dictionary<HandPose, Action>();
     private Dictionary<HandPose, Action> _onHandPoseUpdate = new Dictionary<HandPose, Action>();
     private Dictionary<HandPose, Action> _onHandPoseEnd = new Dictionary<HandPose, Action>();
+
 
 
     private void Start()
@@ -217,6 +219,7 @@ public class Hand : MonoBehaviour, ICollision
         }
     }
 
+
     private void HandlePoseStart(HandPose state)
     {
         switch (state)
@@ -291,6 +294,8 @@ public class Hand : MonoBehaviour, ICollision
             _onHandPoseUpdate[handPose] += callback;
         }
     }
+
+    
 
     private void UpdateAimState()
     {

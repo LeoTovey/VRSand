@@ -30,7 +30,7 @@ public class HandUIController : MonoBehaviour
             LeftHandUI.transform.LookAt(cameraPos, Vector3.up);
             LeftHandUI.transform.Rotate(0, 180, 0);
 
-            eventSystem.ProcessPointEvent(Hands.RightHand.IndexTipTransform.position);
+            eventSystem.ProcessPointEvent(Hands.RightHand.IndexTipTransform.position, Hands.RightHand.IndexFingerTipVelocity);
         }
     }
 

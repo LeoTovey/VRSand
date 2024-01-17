@@ -32,6 +32,9 @@ namespace Michsky.MUIP
         Vector3 cursorPos;
         Vector2 defaultPos;
 
+        public RectTransform CursorTransform;
+
+
         void Awake()
         {
             if (swayParent == null)
@@ -76,7 +79,7 @@ namespace Michsky.MUIP
             if (allowSway == true) 
             {
                 Vector3 clampedPos = new Vector3(cursorPos.x, cursorPos.y, (mainCanvas.transform.position.z / 6f));
-                swayObject.position = Vector3.Lerp(swayObject.position, Camera.main.ScreenToWorldPoint(clampedPos), Time.deltaTime * smoothness);
+                swayObject.position = Vector3.Lerp(swayObject.position, CursorTransform.position, Time.deltaTime * smoothness);
             }
             else { swayObject.localPosition = Vector3.Lerp(swayObject.localPosition, defaultPos, Time.deltaTime * smoothness); }
         }

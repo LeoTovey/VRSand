@@ -5,32 +5,27 @@ using UnityEngine;
 public class ToolsController : MonoBehaviour
 {
     public Hand RightHand;
-    public GameObject Pen;
-    public Vector3 Velocity;
-
-    private Vector3 lastPosition;
+    public Pen Pen;
 
     void Start()
     {
-        Pen.SetActive(false);
+        Pen.gameObject.SetActive(false);
 
         RightHand.BindHandPoseStartCallback(HandPose.ToolHolding, () => {
-            Pen.SetActive(true);
+            Pen.gameObject.SetActive(true);
             RightHand.HandRenderer.enabled = false;
 
         });
 
         RightHand.BindHandPoseStartCallback(HandPose.ToolRemoving, () => {
-            Pen.SetActive(false);
+            Pen.gameObject.SetActive(false);
             RightHand.HandRenderer.enabled = true;
         });
     }
 
-    // Update is called once per frame
     void Update()
     {
-        Velocity = (Pen.transform.position - lastPosition) / Time.deltaTime;
-        lastPosition = Pen.transform.position;
+        Pen.SetVelocity(RightHand.PalmVelocity);
 
         if (Pen.gameObject.activeSelf == true)
         {

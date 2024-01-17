@@ -1,5 +1,6 @@
 
-#pragma kernel  Init                     
+#pragma kernel  Init   
+#pragma kernel  InitWithTexture
 #pragma kernel  CollisionTest            
 #pragma kernel  DisplacementVertical     
 #pragma kernel  DisplacementHorizontal   
@@ -39,7 +40,7 @@ float   InitHeight;
 float2  DisplacementRatio;
 float3  InitColor;
 
-float2  SandCenter;
+uint2  SandCenter;
 float   SandRadius;
 float4  SandAmount;
 
@@ -54,19 +55,27 @@ float slopeThreshold;
 [numthreads(8,8,1)]
 void Init (uint3 DispatchThreadID : SV_DispatchThreadID)
 {
-    //float rgbSum = InitColor.r + InitColor.g + InitColor.b;
-    //float rSand = InitHeight * InitColor.r / rgbSum;
-    //float gSand = InitHeight * InitColor.g / rgbSum;
-    //float bSand = InitHeight * InitColor.b / rgbSum;
+    float rgbSum = InitColor.r + InitColor.g + InitColor.b;
+    float rSand = InitHeight * InitColor.r / rgbSum;
+    float gSand = InitHeight * InitColor.g / rgbSum;
+    float bSand = InitHeight * InitColor.b / rgbSum;
+    Height[DispatchThreadID.xy] = float4(0.0, 0.0, 0.0, InitHeight);
+    DisplacementHeightX[DispatchThreadID.xy] = 0;
+    DisplacementHeightY[DispatchThreadID.xy] = 0;
+}
+
+[numthreads(8,8,1)]
+void InitWithTexture (uint3 DispatchThreadID : SV_DispatchThreadID)
+{
     float4 pixel = InitMap.Load(int3(DispatchThreadID.xy, 0));
     if (pixel.r < 0.8)
     {
         Height[DispatchThreadID.xy] = float4(0.0, 0.0, 0.0, 1.0 - pixel.r);
     }
-    //Height[DispatchThreadID.xy] = float4(0.0, 0.0, 0.0, 0.4);
     DisplacementHeightX[DispatchThreadID.xy] = 0;
     DisplacementHeightY[DispatchThreadID.xy] = 0;
 }
+
 
 [numthreads(8, 8, 1)]
 void CollisionTest(uint3 DispatchThreadID : SV_DispatchThreadID)

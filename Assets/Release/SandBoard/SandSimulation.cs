@@ -12,43 +12,26 @@ using UnityEngine.InputSystem;
 
 public class SandSimulation : MonoBehaviour
 {
+    public SandSimulationKernel Kernel;
 
-    public ComputeShader SandBoardComputeShader;
 
     public Hand[] Hands;
-    public MeshRenderer Pen;
-    public ToolsController tools;
+    private List<ICollision> _collisions = new List<ICollision>();
+
+
+    public Pen Pen;
     public TextMeshProUGUI testMesh;
 
-    private int collisionMapWidth;
-    private int collisionMapHeight;
-
-    public RenderTexture HeightMap;
-    public RenderTexture DisplacementHeightXMap;
-    public RenderTexture DisplacementHeightYMap;
-    public RenderTexture CollisionMap;
-    public RenderTexture DisplacementHeightMap;
-
-    public Texture2D InitTexture;  
+    private int collisionMapWidth => Kernel.MapWidth;
+    private int collisionMapHeight => Kernel.MapHeight;
 
     public RawImage ColorHandleImage;
     public Color SandColor;
     public ParticleSystem SkinnySand;
-    public ParticleSystem ScatterSand;
 
     public Transform CollisionPlane;
 
-    public int maxErosionRangeX = 10;
-    public int maxErosionRangeY = 10;
-
-    private int threadGroupsX;
-    private int threadGroupsY;
-
-    private int threadCountX = 8;
-    private int threadCountY = 8;
-
-
-
+    [SerializeField] private SandScatterPouring _sandScatterPouring;
 
     // for simulation
     public float InitHeight = 0.5f;
@@ -61,42 +44,50 @@ public class SandSimulation : MonoBehaviour
     private float ScatterSandVelocity = 0.04f;
     private int SandRadius = 5;
 
-    
-    private int InitKernel = 0;
-    private int CollisionTestKernel = 0;
-    private int DisplacementVerticalKernel = 0;
-    private int DisplacementHorizontalKernel = 0;
-    private int DisplacementKernel = 0;
-    private int ErosionKernel = 0;
-    private int SkinnyPouringKernel = 0;
-    private int ScatterPouringKernel = 0;
+    private Vector3 _collisionPlaneScale => CollisionPlane.lossyScale;
+    private Vector3 _collisionPlaneCenter => CollisionPlane.position;
+    private float _halfWidth => _collisionPlaneScale.x * 0.5f;
+    private float _halfHeight => _collisionPlaneScale.y * 0.5f;
+    private float _planeMinX => _collisionPlaneCenter.x - _halfWidth;
+    private float _planeMinZ => _collisionPlaneCenter.z - _halfHeight;
+    private float _planeMaxX => _collisionPlaneCenter.x + _halfWidth;
+    private float _planeMaxZ => _collisionPlaneCenter.z + _halfHeight;
+
+    private float[] _sandAmount = new float[4];
+
+
+    private void Awake()
+    {
+        Application.targetFrameRate = -1;
+    }
 
     void Start()
     {
-
-        InitComputeShaderKernel();
-
-        threadGroupsX = Mathf.CeilToInt(HeightMap.width / threadCountX);
-        threadGroupsY = Mathf.CeilToInt(HeightMap.height / threadCountY);
-        SandBoardComputeShader.Dispatch(0, threadGroupsX, threadGroupsY, 1);
-
-        collisionMapWidth = CollisionMap.width;
-        collisionMapHeight = CollisionMap.height;
-
+        _collisions.Add(Hands[0]);
+        _collisions.Add(Hands[1]);
 
         Hands[1].BindHandPoseEndCallback(HandPose.SkinnyPouring, () =>
         {
             SkinnySand.gameObject.SetActive(false);
         });
 
-        Hands[1].BindHandPoseEndCallback(HandPose.ScatterPouring, () =>
-        {
-            ScatterSand.gameObject.SetActive(false);
-        });
+
     }
 
-    
+    public bool IsIntersect(Bounds bounds)
+    {
+        bool isIntersectX = bounds.min.x < _planeMaxX && bounds.max.x > _planeMinX;
+        bool isIntersectZ = bounds.min.z < _planeMaxZ && bounds.max.z > _planeMinZ;
+        bool isIntersectY = bounds.min.y < _collisionPlaneCenter.y && bounds.max.y > _collisionPlaneCenter.y;
+        return isIntersectX && isIntersectY && isIntersectZ;
+    }
 
+    public bool IsIntersectXZ(Bounds bounds)
+    {
+        bool isIntersectX = bounds.min.x < _planeMaxX && bounds.max.x > _planeMinX;
+        bool isIntersectZ = bounds.min.z < _planeMaxZ && bounds.max.z > _planeMinZ;
+        return isIntersectX && isIntersectZ;
+    }
 
     void Update()
     {
@@ -120,6 +111,10 @@ public class SandSimulation : MonoBehaviour
         }
         */
 
+        Kernel.ResetUpdateArea();
+
+
+
         if (Hands[1].CurrentHandPose == HandPose.SkinnyPouring && Hands[1].CurrentHandStatus == HandStatus.Draw)
         {
             float Strength = Hands[1].Strength;
@@ -137,70 +132,18 @@ public class SandSimulation : MonoBehaviour
             if (SandStrength > 0.0f)
             {
                 SkinnySand.gameObject.SetActive(true);
-
-                Vector3 collisionPlaneScale = CollisionPlane.lossyScale;
-                Vector3 collisionPlaneCenter = CollisionPlane.position;
-                
-
-
-
                 Bounds bounds = Hands[1].HandBound;
-                float halfWidth = collisionPlaneScale.x * 0.5f;
-                float halfHeight = collisionPlaneScale.y * 0.5f;
 
-                float planeMinX = collisionPlaneCenter.x - halfWidth;
-                float planeMinZ = collisionPlaneCenter.z - halfHeight;
-                float planeMaxX = collisionPlaneCenter.x + halfWidth;
-                float planeMaxZ = collisionPlaneCenter.z + halfHeight;
+                if (IsIntersectXZ(bounds))
+                { 
 
-                bool isIntersectX = bounds.min.x < planeMaxX && bounds.max.x > planeMinX;
-                bool isIntersectZ = bounds.min.z < planeMaxZ && bounds.max.z > planeMinZ;
-                bool isIntersectY = bounds.min.y < collisionPlaneCenter.y && bounds.max.y > collisionPlaneCenter.y;
+                    _sandAmount[3] = (color.r + color.g + color.b) * SandStrength * SkinnySandVelocity;
+                    _sandAmount[0] = color.r * SandStrength * SkinnySandVelocity;
+                    _sandAmount[1] = color.g * SandStrength * SkinnySandVelocity;
+                    _sandAmount[2] = color.b * SandStrength * SkinnySandVelocity;
 
-                if (isIntersectX && isIntersectZ)
-                {
-                    Vector3 localMin = bounds.min - collisionPlaneCenter;
-                    Vector3 localMax = bounds.max - collisionPlaneCenter;
-                    Vector3 localCenter = skinnyPouringCenter - collisionPlaneCenter;
+                    Kernel.SkinnyPouring(bounds, CollisionPlane, skinnyPouringCenter, _sandAmount, SandRadius);
 
-                    int minX = Mathf.Clamp(Mathf.CeilToInt((localMin.x / collisionPlaneScale.x + 0.5f) * (collisionMapWidth - 1)) - 1, 0, collisionMapWidth - 1);
-                    int maxX = Mathf.Clamp(Mathf.CeilToInt((localMax.x / collisionPlaneScale.x + 0.5f) * (collisionMapWidth - 1)) + 1, 0, collisionMapWidth - 1);
-                    int minY = Mathf.Clamp(Mathf.CeilToInt((localMin.z / collisionPlaneScale.y + 0.5f) * (collisionMapHeight - 1)) - 1, 0, collisionMapHeight - 1);
-                    int maxY = Mathf.Clamp(Mathf.CeilToInt((localMax.z / collisionPlaneScale.y + 0.5f) * (collisionMapHeight - 1)) + 1, 0, collisionMapHeight - 1);
-
-                    int centerX = Mathf.Clamp(Mathf.CeilToInt((localCenter.x / collisionPlaneScale.x + 0.5f) * (collisionMapWidth - 1)) - 1, 0, collisionMapWidth - 1);
-                    int centerY = Mathf.Clamp(Mathf.CeilToInt((localCenter.z / collisionPlaneScale.y + 0.5f) * (collisionMapHeight - 1)) - 1, 0, collisionMapHeight - 1);
-
-
-
-                    float uvCenterX = Mathf.Clamp(skinnyPouringCenter.x / collisionPlaneScale.x + 0.5f, 0.0f, 1.0f);
-                    float uvCenterY = Mathf.Clamp(skinnyPouringCenter.z / collisionPlaneScale.y + 0.5f, 0.0f, 1.0f);
-                    float uvMinX = Mathf.Clamp(localMin.x / collisionPlaneScale.x + 0.5f, 0.0f, 1.0f);
-                    float uvMaxX = Mathf.Clamp(localMax.x / collisionPlaneScale.x + 0.5f, 0.0f, 1.0f);
-                    float uvMinY = Mathf.Clamp(localMin.z / collisionPlaneScale.y + 0.5f, 0.0f, 1.0f);
-                    float uvMaxY = Mathf.Clamp(localMax.z / collisionPlaneScale.y + 0.5f, 0.0f, 1.0f);
-                    float radius = Mathf.Min(maxY - minY, maxX - minX) * 0.5f;
-
-
-                    Vector4 SandAmount = new Vector4(color.r, color.g, color.b, 0);
-                    SandAmount.w = SandAmount.x + SandAmount.y + SandAmount.z;
-                    SandAmount *= SandStrength * SkinnySandVelocity;
-
-
-                    //testMesh.text = SandAmount + "";
-                    //testMesh.text += "\n " + Mathf.InverseLerp(MinStrength, MaxStrength, Strength);
-
-                    //SandAmount = SandAmount * Mathf.Lerp(0.0f, 1.0f, (Strength - MinStrength) / (MaxStrength - MinStrength));
-                    SandBoardComputeShader.SetInts("StartId", new int[] { minX, minY });
-                    SandBoardComputeShader.SetFloat("SandRadius", SandRadius);
-                    SandBoardComputeShader.SetFloats("SandAmount", new float[] { SandAmount[0], SandAmount[1], SandAmount[2], SandAmount[3] });
-                    //SandBoardComputeShader.SetFloats("SandCenter", new float[] { (uvMinX + uvMaxX) * 0.5f, (uvMinY + uvMaxY) * 0.5f });
-                    SandBoardComputeShader.SetFloats("SandCenter", new float[] { centerX, centerY});
-
-
-                    int threadGroupsX_Dev = Mathf.FloorToInt((maxX - minX - 1.0f) / threadCountX);
-                    int threadGroupsY_Dev = Mathf.FloorToInt((maxY - minY - 1.0f) / threadCountY);
-                    SandBoardComputeShader.Dispatch(SkinnyPouringKernel, threadGroupsX_Dev, threadGroupsY_Dev, 1);
                 }
             }
             else
@@ -210,402 +153,59 @@ public class SandSimulation : MonoBehaviour
         }
         else if(Hands[1].CurrentHandPose == HandPose.ScatterPouring && Hands[1].CurrentHandStatus == HandStatus.Draw)
         {
-            float Strength = Hands[1].Strength;
-            float SandStrength = Mathf.InverseLerp(MinStrength, MaxStrength, Strength);
-            Vector3 scatterPouringCenter = Hands[1].PalmTransform.position;
-            ScatterSand.gameObject.transform.position = scatterPouringCenter;
-            ScatterSand.gameObject.transform.rotation = Hands[1].PalmTransform.rotation;
-            var main = ScatterSand.main;
-            //main.simulationSpeed = SandStrength;
-            //Color color = ColorHandleImage.color;
+
             Color color = SandColor;
-            color.a = SandStrength * 0.2f;
-
-
-            main.startColor = color;
-            if (SandStrength > 0.0f)
+            color.a = _sandScatterPouring.Strenth * 0.2f;
+            if (_sandScatterPouring.Strenth > 0.0f)
             {
-                ScatterSand.gameObject.SetActive(true);
-                Vector3 collisionPlaneScale = CollisionPlane.lossyScale;
-                Vector3 collisionPlaneCenter = CollisionPlane.position;
-
                 Bounds bounds = Hands[1].ScatterPouringCenter;
-
-                float halfWidth = collisionPlaneScale.x * 0.5f;
-                float halfHeight = collisionPlaneScale.y * 0.5f;
-
-                float planeMinX = collisionPlaneCenter.x - halfWidth;
-                float planeMinZ = collisionPlaneCenter.z - halfHeight;
-                float planeMaxX = collisionPlaneCenter.x + halfWidth;
-                float planeMaxZ = collisionPlaneCenter.z + halfHeight;
-
-                bool isIntersectX = bounds.min.x < planeMaxX && bounds.max.x > planeMinX;
-                bool isIntersectZ = bounds.min.z < planeMaxZ && bounds.max.z > planeMinZ;
-                bool isIntersectY = bounds.min.y < collisionPlaneCenter.y && bounds.max.y > collisionPlaneCenter.y;
-
-                if (isIntersectX && isIntersectZ)
+                if (IsIntersectXZ(bounds))
                 {
-                    Vector3 localMin = bounds.min - collisionPlaneCenter;
-                    Vector3 localMax = bounds.max - collisionPlaneCenter;
+                    _sandAmount[3] = (color.r + color.g + color.b) * _sandScatterPouring.Strenth * ScatterSandVelocity;
+                    _sandAmount[0] = color.r * _sandScatterPouring.Strenth * ScatterSandVelocity;
+                    _sandAmount[1] = color.g * _sandScatterPouring.Strenth * ScatterSandVelocity;
+                    _sandAmount[2] = color.b * _sandScatterPouring.Strenth * ScatterSandVelocity;
 
+                    Kernel.ScatterPouring(bounds, CollisionPlane, _sandAmount);
 
-                    int minX = Mathf.Clamp(Mathf.CeilToInt((localMin.x / collisionPlaneScale.x + 0.5f) * (collisionMapWidth - 1)) - 1, 0, collisionMapWidth - 1);
-                    int maxX = Mathf.Clamp(Mathf.CeilToInt((localMax.x / collisionPlaneScale.x + 0.5f) * (collisionMapWidth - 1)) + 1, 0, collisionMapWidth - 1);
-                    int minY = Mathf.Clamp(Mathf.CeilToInt((localMin.z / collisionPlaneScale.y + 0.5f) * (collisionMapHeight - 1)) - 1, 0, collisionMapHeight - 1);
-                    int maxY = Mathf.Clamp(Mathf.CeilToInt((localMax.z / collisionPlaneScale.y + 0.5f) * (collisionMapHeight - 1)) + 1, 0, collisionMapHeight - 1);
-
-
-                    Vector4 SandAmount = new Vector4(color.r, color.g, color.b, 0);
-                    SandAmount.w = SandAmount.x + SandAmount.y + SandAmount.z;
-                    SandAmount *= SandStrength * ScatterSandVelocity;
-                    SandBoardComputeShader.SetFloats("SandCenter", new float[] { 0.5f * minX + 0.5f * maxX, 0.5f * minY + 0.5f * maxY });
-                    SandBoardComputeShader.SetFloat("SandRadius", 0.5f * (maxY - minY));
-                    SandBoardComputeShader.SetInts("StartId", new int[] { minX, minY });
-                    SandBoardComputeShader.SetFloats("SandAmount", new float[] { SandAmount[0], SandAmount[1], SandAmount[2], SandAmount[3] });
-                    int threadGroupsX_Dev = Mathf.FloorToInt((maxX - minX - 1.0f) / threadCountX);
-                    int threadGroupsY_Dev = Mathf.FloorToInt((maxY - minY - 1.0f) / threadCountY);
-                    SandBoardComputeShader.Dispatch(ScatterPouringKernel, threadGroupsX_Dev, threadGroupsY_Dev, 1);
                 }
 
-            }
-            else
-            {
-                ScatterSand.gameObject.SetActive(false);
             }
         }
         else if (Hands[1].CurrentHandStatus == HandStatus.Tools)
         {
-            PenDisplacement();
+            Displacement(Pen);
+            
         }
         else
         {
-            Displacement();
+            for (int c = 0; c < Hands.Length; c++)
+            {
+                Displacement(Hands[c]);
+            }
+            
+
         }
-        //Collision();
-        //SandBoardComputeShader.Dispatch(ErosionKernel, threadGroupsX, threadGroupsY, 1);
-    }
-    void PenDisplacement()
-    {
-        Vector3 collisionPlaneScale = CollisionPlane.lossyScale;
-        Vector3 collisionPlaneCenter = CollisionPlane.position;
-        float halfWidth = collisionPlaneScale.x * 0.5f;
-        float halfHeight = collisionPlaneScale.y * 0.5f;
-        float planeMinX = collisionPlaneCenter.x - halfWidth;
-        float planeMinZ = collisionPlaneCenter.z - halfHeight;
-        float planeMaxX = collisionPlaneCenter.x + halfWidth;
-        float planeMaxZ = collisionPlaneCenter.z + halfHeight;
 
-        int updateAreaMinX = collisionMapWidth - 1;
-        int updateAreaMinY = collisionMapHeight - 1;
-        int updateAreaMaxX = 0;
-        int updateAreaMaxY = 0;
-
-        bool isCollision = false;
-
-        Bounds bounds = Pen.bounds;
-
-        bool isIntersectX = bounds.min.x < planeMaxX && bounds.max.x > planeMinX;
-        bool isIntersectZ = bounds.min.z < planeMaxZ && bounds.max.z > planeMinZ;
-        bool isIntersectY = bounds.min.y < collisionPlaneCenter.y && bounds.max.y > collisionPlaneCenter.y;
-
-        if (isIntersectX && isIntersectY && isIntersectZ)
+        if (Kernel.IsAreaUpdated())
         {
-            isCollision = true;
-
-            Vector3 localMin = bounds.min - collisionPlaneCenter;
-            Vector3 localMax = bounds.max - collisionPlaneCenter;
-
-            int minX = Mathf.Clamp(Mathf.CeilToInt((localMin.x / collisionPlaneScale.x + 0.5f) * (collisionMapWidth - 1)) - 1, 0, collisionMapWidth - 1);
-            int maxX = Mathf.Clamp(Mathf.CeilToInt((localMax.x / collisionPlaneScale.x + 0.5f) * (collisionMapWidth - 1)) + 1, 0, collisionMapWidth - 1);
-            int minY = Mathf.Clamp(Mathf.CeilToInt((localMin.z / collisionPlaneScale.y + 0.5f) * (collisionMapHeight - 1)) - 1, 0, collisionMapHeight - 1);
-            int maxY = Mathf.Clamp(Mathf.CeilToInt((localMax.z / collisionPlaneScale.y + 0.5f) * (collisionMapHeight - 1)) + 1, 0, collisionMapHeight - 1);
-
-
-            SandBoardComputeShader.SetInts("StartId", new int[] { minX, minY });
-
-
-            updateAreaMinX = Mathf.Min(updateAreaMinX, minX);
-            updateAreaMinY = Mathf.Min(updateAreaMinY, minY);
-            updateAreaMaxX = Mathf.Max(updateAreaMaxX, maxX);
-            updateAreaMaxY = Mathf.Max(updateAreaMaxY, maxY);
-
-            Vector3 velocity = tools.Velocity;
-
-            float absX = math.abs(velocity.x) + 0.0001f;
-            float absY = math.abs(velocity.z) + 0.0001f;
-
-            float HorizontalRatio = absX / (absX + absY);
-            float VerticalRatio = absY / (absY + absX);
-
-            SandBoardComputeShader.SetFloats("DisplacementRatio", new float[] { HorizontalRatio, VerticalRatio });
-
-            int threadGroupsX_Dev = Mathf.FloorToInt((maxX - minX - 1.0f) / threadCountX);
-            int threadGroupsY_Dev = Mathf.FloorToInt((maxY - minY - 1.0f) / threadCountY);
-            SandBoardComputeShader.Dispatch(CollisionTestKernel, threadGroupsX_Dev, threadGroupsY_Dev, 1);
-
-            int startX, endX, stepX;
-            int startY, endY, stepY;
-
-            if (velocity.x < 0)
-            {
-                startX = maxX - 1;
-                endX = minX;
-                stepX = -1;
-            }
-            else
-            {
-                startX = minX + 1;
-                endX = maxX;
-                stepX = 1;
-            }
-
-            if (velocity.z < 0)
-            {
-                startY = maxY - 1;
-                endY = minY;
-                stepY = -1;
-            }
-            else
-            {
-                startY = minY + 1;
-                endY = maxY;
-                stepY = 1;
-
-            }
-
-
-            int nextDisplacementRaw = 0;
-            for (int i = startY; i != endY; i += stepY)
-            {
-                nextDisplacementRaw = Mathf.Min(collisionMapHeight - 1, Mathf.Max(i + stepY * maxErosionRangeY, 0));
-                SandBoardComputeShader.SetInt("DisplacementRaw", i);
-                SandBoardComputeShader.SetInt("NextDisplacementRaw", nextDisplacementRaw);
-                SandBoardComputeShader.Dispatch(DisplacementVerticalKernel, threadGroupsX_Dev, 1, 1);
-            }
-
-            updateAreaMinY = Mathf.Min(updateAreaMinY, nextDisplacementRaw);
-            updateAreaMaxY = Mathf.Max(updateAreaMaxY, nextDisplacementRaw);
-            updateAreaMinY = Mathf.Min(updateAreaMinY, startY);
-            updateAreaMaxY = Mathf.Max(updateAreaMaxY, startY);
-
-            int nextDisplacementColumn = 0;
-            for (int i = startX; i != endX; i += stepX)
-            {
-                nextDisplacementColumn = Mathf.Min(collisionMapWidth - 1, Mathf.Max(i + stepX * maxErosionRangeX, 0));
-                SandBoardComputeShader.SetInt("DisplacementColumn", i);
-                SandBoardComputeShader.SetInt("NextDisplacementColumn", nextDisplacementColumn);
-                SandBoardComputeShader.Dispatch(DisplacementHorizontalKernel, 1, threadGroupsY_Dev, 1);
-            }
-
-            updateAreaMinX = Mathf.Min(updateAreaMinX, nextDisplacementColumn);
-            updateAreaMaxX = Mathf.Max(updateAreaMaxX, nextDisplacementColumn);
-            updateAreaMinX = Mathf.Min(updateAreaMinX, startX);
-            updateAreaMaxX = Mathf.Max(updateAreaMaxX, startX);
+            Kernel.Displacement();
         }
 
-
-        if (isCollision)
-        {
-
-            SandBoardComputeShader.SetInts("StartId", new int[] { updateAreaMinX, updateAreaMinY });
-
-            int threadGroupsX_Dev = Mathf.FloorToInt((updateAreaMaxX - updateAreaMinX - 1.0f) / threadCountX);
-            int threadGroupsY_Dev = Mathf.FloorToInt((updateAreaMaxY - updateAreaMinY - 1.0f) / threadCountY);
-
-            SandBoardComputeShader.Dispatch(DisplacementKernel, threadGroupsX_Dev, threadGroupsY_Dev, 1);
-        }
-
+        
 
     }
 
-    void Displacement()
+    bool Displacement(ICollision collision)
     {
-        Vector3 collisionPlaneScale = CollisionPlane.lossyScale;
-        Vector3 collisionPlaneCenter = CollisionPlane.position;
-        float halfWidth = collisionPlaneScale.x * 0.5f;
-        float halfHeight = collisionPlaneScale.y * 0.5f;
-        float planeMinX = collisionPlaneCenter.x - halfWidth;
-        float planeMinZ = collisionPlaneCenter.z - halfHeight;
-        float planeMaxX = collisionPlaneCenter.x + halfWidth;
-        float planeMaxZ = collisionPlaneCenter.z + halfHeight;
-
-        int updateAreaMinX = collisionMapWidth - 1;
-        int updateAreaMinY = collisionMapHeight - 1;
-        int updateAreaMaxX = 0;
-        int updateAreaMaxY = 0;
-
-        bool isCollision = false;
-
-        for (int c = 0; c < Hands.Length; c++)
+        Bounds bounds = collision.CollisionBound;
+        if (collision.DetectCollision() && IsIntersect(bounds))
         {
-            Bounds bounds = Hands[c].HandBound;
-
-            if (Hands[c].CurrentHandStatus == HandStatus.Draw)
-            {
-                bool isIntersectX = bounds.min.x < planeMaxX && bounds.max.x > planeMinX;
-                bool isIntersectZ = bounds.min.z < planeMaxZ && bounds.max.z > planeMinZ;
-                bool isIntersectY = bounds.min.y < collisionPlaneCenter.y && bounds.max.y > collisionPlaneCenter.y;
-
-                if (isIntersectX && isIntersectY && isIntersectZ)
-                {
-                    isCollision = true;
-
-                    Vector3 localMin = bounds.min - collisionPlaneCenter;
-                    Vector3 localMax = bounds.max - collisionPlaneCenter;
-
-                    int minX = Mathf.Clamp(Mathf.CeilToInt((localMin.x / collisionPlaneScale.x + 0.5f) * (collisionMapWidth - 1)) - 1, 0, collisionMapWidth - 1);
-                    int maxX = Mathf.Clamp(Mathf.CeilToInt((localMax.x / collisionPlaneScale.x + 0.5f) * (collisionMapWidth - 1)) + 1, 0, collisionMapWidth - 1);
-                    int minY = Mathf.Clamp(Mathf.CeilToInt((localMin.z / collisionPlaneScale.y + 0.5f) * (collisionMapHeight - 1)) - 1, 0, collisionMapHeight - 1);
-                    int maxY = Mathf.Clamp(Mathf.CeilToInt((localMax.z / collisionPlaneScale.y + 0.5f) * (collisionMapHeight - 1)) + 1, 0, collisionMapHeight - 1);
-
-
-                    SandBoardComputeShader.SetInts("StartId", new int[] {minX, minY});
-
-
-                    updateAreaMinX = Mathf.Min(updateAreaMinX, minX);
-                    updateAreaMinY = Mathf.Min(updateAreaMinY, minY);
-                    updateAreaMaxX = Mathf.Max(updateAreaMaxX, maxX);
-                    updateAreaMaxY = Mathf.Max(updateAreaMaxY, maxY);
-
-                    Vector3 velocity = Hands[c].Velocity;
-
-                    float absX = math.abs(velocity.x) + 0.0001f;
-                    float absY = math.abs(velocity.z) + 0.0001f;
-
-                    float HorizontalRatio = absX / (absX + absY);
-                    float VerticalRatio = absY / (absY + absX);
-
-                    SandBoardComputeShader.SetFloats("DisplacementRatio", new float[]{ HorizontalRatio, VerticalRatio});
-
-                    int threadGroupsX_Dev = Mathf.FloorToInt((maxX - minX - 1.0f) / threadCountX);
-                    int threadGroupsY_Dev = Mathf.FloorToInt((maxY - minY - 1.0f) / threadCountY);
-                    SandBoardComputeShader.Dispatch(CollisionTestKernel, threadGroupsX_Dev, threadGroupsY_Dev, 1);
-
-                    int startX, endX, stepX;
-                    int startY, endY, stepY;
-
-                    if (velocity.x < 0)
-                    {
-                        startX = maxX - 1;
-                        endX = minX;
-                        stepX = -1;
-                    }
-                    else
-                    {
-                        startX = minX + 1;
-                        endX = maxX;
-                        stepX = 1;
-                    }
-
-                    if (velocity.z < 0)
-                    {
-                        startY = maxY - 1;
-                        endY = minY;
-                        stepY = -1;
-                    }
-                    else
-                    {
-                        startY = minY + 1;
-                        endY = maxY;
-                        stepY = 1;
-
-                    }
-
-
-                    int nextDisplacementRaw = 0;
-                    for (int i = startY; i != endY; i += stepY)
-                    {
-                        nextDisplacementRaw = Mathf.Min(collisionMapHeight - 1, Mathf.Max(i + stepY * maxErosionRangeY, 0));
-                        SandBoardComputeShader.SetInt("DisplacementRaw", i);
-                        SandBoardComputeShader.SetInt("NextDisplacementRaw", nextDisplacementRaw);
-                        SandBoardComputeShader.Dispatch(DisplacementVerticalKernel, threadGroupsX_Dev, 1, 1);
-                    }
-
-                    updateAreaMinY = Mathf.Min(updateAreaMinY, nextDisplacementRaw);
-                    updateAreaMaxY = Mathf.Max(updateAreaMaxY, nextDisplacementRaw);
-                    updateAreaMinY = Mathf.Min(updateAreaMinY, startY);
-                    updateAreaMaxY = Mathf.Max(updateAreaMaxY, startY);
-
-                    int nextDisplacementColumn = 0;
-                    for (int i = startX; i != endX; i += stepX)
-                    {
-                        nextDisplacementColumn = Mathf.Min(collisionMapWidth - 1, Mathf.Max(i + stepX * maxErosionRangeX, 0));
-                        SandBoardComputeShader.SetInt("DisplacementColumn", i);
-                        SandBoardComputeShader.SetInt("NextDisplacementColumn", nextDisplacementColumn);
-                        SandBoardComputeShader.Dispatch(DisplacementHorizontalKernel, 1, threadGroupsY_Dev, 1);
-                    }
-
-                    updateAreaMinX = Mathf.Min(updateAreaMinX, nextDisplacementColumn);
-                    updateAreaMaxX = Mathf.Max(updateAreaMaxX, nextDisplacementColumn);
-                    updateAreaMinX = Mathf.Min(updateAreaMinX, startX);
-                    updateAreaMaxX = Mathf.Max(updateAreaMaxX, startX);
-                }
-            }
-
+            Kernel.CollisionTest(bounds, CollisionPlane, collision);
+            Kernel.Sweep(collision.CenterVelocity);
+            return true;
         }
 
-        if (isCollision)
-        {
-
-            SandBoardComputeShader.SetInts("StartId", new int[] { updateAreaMinX, updateAreaMinY });
-
-            int threadGroupsX_Dev = Mathf.FloorToInt((updateAreaMaxX - updateAreaMinX - 1.0f) / threadCountX);
-            int threadGroupsY_Dev = Mathf.FloorToInt((updateAreaMaxY - updateAreaMinY - 1.0f) / threadCountY);
-
-            SandBoardComputeShader.Dispatch(DisplacementKernel, threadGroupsX_Dev, threadGroupsY_Dev, 1);
-        }
-
-
-    }
-
-
-    void InitComputeShaderKernel()
-    {
-        InitKernel = SandBoardComputeShader.FindKernel("Init");
-        CollisionTestKernel = SandBoardComputeShader.FindKernel("CollisionTest");
-        DisplacementVerticalKernel = SandBoardComputeShader.FindKernel("DisplacementVertical");
-        DisplacementHorizontalKernel = SandBoardComputeShader.FindKernel("DisplacementHorizontal");
-        DisplacementKernel = SandBoardComputeShader.FindKernel("Displacement");
-        ErosionKernel = SandBoardComputeShader.FindKernel("Erosion");
-        SkinnyPouringKernel = SandBoardComputeShader.FindKernel("SkinnyPouring");
-        ScatterPouringKernel = SandBoardComputeShader.FindKernel("ScatterPouring");
-
-        // Init
-        SandBoardComputeShader.SetTexture(InitKernel, "Height", HeightMap);
-        SandBoardComputeShader.SetTexture(InitKernel, "DisplacementHeightX", DisplacementHeightXMap);
-        SandBoardComputeShader.SetTexture(InitKernel, "DisplacementHeightY", DisplacementHeightYMap);
-        SandBoardComputeShader.SetTexture(InitKernel, "InitMap", InitTexture);
-        SandBoardComputeShader.SetFloat("MaxHeight", MaxHeight);
-        SandBoardComputeShader.SetFloat("InitHeight", InitHeight);
-        SandBoardComputeShader.SetFloats("InitColor", new float[] { InitColor.r, InitColor.g, InitColor.b});
-
-        // CollisionTest
-        SandBoardComputeShader.SetTexture(CollisionTestKernel, "Height", HeightMap);
-        SandBoardComputeShader.SetTexture(CollisionTestKernel, "DisplacementHeightX", DisplacementHeightXMap);
-        SandBoardComputeShader.SetTexture(CollisionTestKernel, "DisplacementHeightY", DisplacementHeightYMap);
-        SandBoardComputeShader.SetTexture(CollisionTestKernel, "Collision", CollisionMap);
-
-        // DisplacementVertical
-        SandBoardComputeShader.SetTexture(DisplacementVerticalKernel, "DisplacementHeightY", DisplacementHeightYMap);
-        SandBoardComputeShader.SetTexture(DisplacementVerticalKernel, "Collision", CollisionMap);
-
-        // DisplacementHorizontal
-        SandBoardComputeShader.SetTexture(DisplacementHorizontalKernel, "DisplacementHeightX", DisplacementHeightXMap);
-        SandBoardComputeShader.SetTexture(DisplacementHorizontalKernel, "Collision", CollisionMap);
-
-        // Displacement
-        SandBoardComputeShader.SetTexture(DisplacementKernel, "Height", HeightMap);
-        SandBoardComputeShader.SetTexture(DisplacementKernel, "DisplacementHeightX", DisplacementHeightXMap);
-        SandBoardComputeShader.SetTexture(DisplacementKernel, "DisplacementHeightY", DisplacementHeightYMap);
-        SandBoardComputeShader.SetInts("CollisionMapSize", new int[] { CollisionMap.width, CollisionMap.height});
-
-
-        // Sand Pouring
-        SandBoardComputeShader.SetTexture(SkinnyPouringKernel, "Height", HeightMap);
-        SandBoardComputeShader.SetTexture(ScatterPouringKernel, "Height", HeightMap);
-        SandBoardComputeShader.SetInts("HeightMapSize", new int[] { HeightMap.width, HeightMap.height });
-
-        SandBoardComputeShader.SetTexture(ErosionKernel, "Height", HeightMap);
-        SandBoardComputeShader.SetInts("HeightMapSize", new int[] { HeightMap.width, HeightMap.height });
+        return false;
     }
 }

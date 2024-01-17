@@ -31,7 +31,7 @@ public enum HandStatus
     HeightAdjusting,
 }
 
-public class Hand : MonoBehaviour
+public class Hand : MonoBehaviour, ICollision
 {
     public HandType handType;
     public bool IsValid { get; private set; }
@@ -41,7 +41,17 @@ public class Hand : MonoBehaviour
     public HandStatus CurrentHandStatus { get; private set; } = HandStatus.Draw;
 
     public Bounds HandBound { get; private set; }
-    public Vector3 Velocity { get; private set; }
+    public Vector3 PalmVelocity { get; private set; }
+    public Vector3 IndexFingerTipVelocity { get; private set; }
+    public Vector3 CenterVelocity => PalmVelocity;
+    public Bounds CollisionBound => HandBound;
+    public CollisionType CollisionType => CollisionType.Hand;
+    
+    public bool DetectCollision()
+    {
+        return CurrentHandStatus == HandStatus.Draw;
+    }
+
     public float Strength { private set; get; } 
     public Vector3 SkinnyPouringCenter { private set; get; }
     public Bounds ScatterPouringCenter { private set; get; }
@@ -49,20 +59,17 @@ public class Hand : MonoBehaviour
 
     public GameObject HandMesh;
     public Renderer HandRenderer;
-
     public Transform IndexTipTransform;
-
     public Transform PalmTransform;
-
-
-    private Vector3 LastPalmPosition;
-
     public List<Transform> handJoints = new List<Transform>(new Transform[(int)HandJoint.JointMax]);
-    private HandJointLocations handJointLocations = new HandJointLocations();
 
-    private Dictionary<HandPose, Action> OnHandPoseStart = new Dictionary<HandPose, Action>();
-    private Dictionary<HandPose, Action> OnHandPoseUpdate = new Dictionary<HandPose, Action>();
-    private Dictionary<HandPose, Action> OnHandPoseEnd = new Dictionary<HandPose, Action>();
+    private Vector3 _lastPalmPosition;
+    private Vector3 _lastIndexFingerTipPosition;
+
+    private HandJointLocations _handJointLocations = new HandJointLocations();
+    private Dictionary<HandPose, Action> _onHandPoseStart = new Dictionary<HandPose, Action>();
+    private Dictionary<HandPose, Action> _onHandPoseUpdate = new Dictionary<HandPose, Action>();
+    private Dictionary<HandPose, Action> _onHandPoseEnd = new Dictionary<HandPose, Action>();
 
 
     private void Start()
@@ -113,15 +120,17 @@ public class Hand : MonoBehaviour
         HandBound = HandRenderer.bounds;
 
         // update velocity
-        Velocity = (PalmTransform.position - LastPalmPosition) / Time.deltaTime;
-        LastPalmPosition = PalmTransform.position;
+        PalmVelocity = (PalmTransform.position - _lastPalmPosition) / Time.deltaTime;
+        IndexFingerTipVelocity = (IndexTipTransform.position - _lastIndexFingerTipPosition) / Time.deltaTime;
+        _lastPalmPosition = PalmTransform.position;
+        _lastIndexFingerTipPosition = IndexTipTransform.position;
     }
 
     private void UpdateHandJoints()
     {
-        if (PXR_HandTracking.GetJointLocations(handType, ref handJointLocations))
+        if (PXR_HandTracking.GetJointLocations(handType, ref _handJointLocations))
         {
-            if (handJointLocations.isActive == 0)
+            if (_handJointLocations.isActive == 0)
             {
                 SetIsValid(false);
                 return;
@@ -129,7 +138,7 @@ public class Hand : MonoBehaviour
 
             SetIsValid(true);
             UpdateAimState();
-            transform.localScale = Vector3.one * handJointLocations.handScale;
+            transform.localScale = Vector3.one * _handJointLocations.handScale;
 
             for (int i = 0; i < handJoints.Count; ++i)
             {
@@ -137,8 +146,8 @@ public class Hand : MonoBehaviour
 
                 if (i == (int)HandJoint.JointWrist)
                 {
-                    handJoints[i].localPosition = handJointLocations.jointLocations[i].pose.Position.ToVector3();
-                    handJoints[i].localRotation = handJointLocations.jointLocations[i].pose.Orientation.ToQuat();
+                    handJoints[i].localPosition = _handJointLocations.jointLocations[i].pose.Position.ToVector3();
+                    handJoints[i].localRotation = _handJointLocations.jointLocations[i].pose.Orientation.ToQuat();
                 }
                 else
                 {
@@ -151,15 +160,15 @@ public class Hand : MonoBehaviour
                         i == (int)HandJoint.JointRingMetacarpal ||
                         i == (int)HandJoint.JointLittleMetacarpal)
                     {
-                        parentPose = new UnityEngine.Pose(handJointLocations.jointLocations[1].pose.Position.ToVector3(), handJointLocations.jointLocations[1].pose.Orientation.ToQuat());
+                        parentPose = new UnityEngine.Pose(_handJointLocations.jointLocations[1].pose.Position.ToVector3(), _handJointLocations.jointLocations[1].pose.Orientation.ToQuat());
                     }
                     else
                     {
-                        parentPose = new UnityEngine.Pose(handJointLocations.jointLocations[i - 1].pose.Position.ToVector3(), handJointLocations.jointLocations[i - 1].pose.Orientation.ToQuat());
+                        parentPose = new UnityEngine.Pose(_handJointLocations.jointLocations[i - 1].pose.Position.ToVector3(), _handJointLocations.jointLocations[i - 1].pose.Orientation.ToQuat());
                     }
 
                     var inverseParentRotation = Quaternion.Inverse(parentPose.rotation);
-                    handJoints[i].localRotation = inverseParentRotation * handJointLocations.jointLocations[i].pose.Orientation.ToQuat();
+                    handJoints[i].localRotation = inverseParentRotation * _handJointLocations.jointLocations[i].pose.Orientation.ToQuat();
                 }
             }
 
@@ -194,16 +203,16 @@ public class Hand : MonoBehaviour
     {
         if (handPose != CurrentHandPose)
         {
-            if (OnHandPoseEnd.ContainsKey(CurrentHandPose))
+            if (_onHandPoseEnd.ContainsKey(CurrentHandPose))
             {
-                OnHandPoseEnd[CurrentHandPose]?.Invoke();
+                _onHandPoseEnd[CurrentHandPose]?.Invoke();
             }
             HandlePoseEnd(CurrentHandPose);
             CurrentHandPose = handPose;
             HandlePoseStart(CurrentHandPose);
-            if (OnHandPoseStart.ContainsKey(CurrentHandPose))
+            if (_onHandPoseStart.ContainsKey(CurrentHandPose))
             {
-                OnHandPoseStart[CurrentHandPose]?.Invoke();
+                _onHandPoseStart[CurrentHandPose]?.Invoke();
             }
         }
     }
@@ -221,6 +230,9 @@ public class Hand : MonoBehaviour
             case HandPose.ToolRemoving:
                 CurrentHandStatus = HandStatus.Draw;
                 break;
+            case HandPose.UIActivation:
+                CurrentHandStatus = HandStatus.UI;
+                break;
         }
     }
 
@@ -229,6 +241,9 @@ public class Hand : MonoBehaviour
         switch (state)
         {
             case HandPose.HandUpward:
+                CurrentHandStatus = HandStatus.Draw;
+                break;
+            case HandPose.UIActivation:
                 CurrentHandStatus = HandStatus.Draw;
                 break;
         }
@@ -243,43 +258,43 @@ public class Hand : MonoBehaviour
         */
     public void BindHandPoseStartCallback(HandPose handPose, Action callback)
     {
-        if (!OnHandPoseStart.ContainsKey(handPose))
+        if (!_onHandPoseStart.ContainsKey(handPose))
         {
-            OnHandPoseStart[handPose] = callback;
+            _onHandPoseStart[handPose] = callback;
         }
         else
         {
-            OnHandPoseStart[handPose] += callback;
+            _onHandPoseStart[handPose] += callback;
         }
     }
 
     public void BindHandPoseEndCallback(HandPose handPose, Action callback)
     {
-        if (!OnHandPoseEnd.ContainsKey(handPose))
+        if (!_onHandPoseEnd.ContainsKey(handPose))
         {
-            OnHandPoseEnd[handPose] = callback;
+            _onHandPoseEnd[handPose] = callback;
         }
         else
         {
-            OnHandPoseEnd[handPose] += callback;
+            _onHandPoseEnd[handPose] += callback;
         }
     }
 
     public void BindHandPoseUpdateCallback(HandPose handPose, Action callback)
     {
-        if (!OnHandPoseUpdate.ContainsKey(handPose))
+        if (!_onHandPoseUpdate.ContainsKey(handPose))
         {
-            OnHandPoseUpdate[handPose] = callback;
+            _onHandPoseUpdate[handPose] = callback;
         }
         else
         {
-            OnHandPoseUpdate[handPose] += callback;
+            _onHandPoseUpdate[handPose] += callback;
         }
     }
 
     private void UpdateAimState()
     {
-        Strength = Vector3.Distance(handJointLocations.jointLocations[5].pose.Position.ToVector3() ,handJointLocations.jointLocations[8].pose.Position.ToVector3());
+        Strength = Vector3.Distance(_handJointLocations.jointLocations[5].pose.Position.ToVector3() ,_handJointLocations.jointLocations[8].pose.Position.ToVector3());
     }
 
 

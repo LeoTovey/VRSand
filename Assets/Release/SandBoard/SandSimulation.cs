@@ -103,7 +103,7 @@ public class SandSimulation : MonoBehaviour
 
 
 
-        if (Hands[1].CurrentHandPose == HandPose.SkinnyPouring && Hands[1].CurrentHandStatus == HandStatus.Draw)
+        if (Hands[1].CurrentHandPose == HandPose.SkinnyPouring && Hands[1].IsDraw)
         {
 
 
@@ -121,7 +121,7 @@ public class SandSimulation : MonoBehaviour
             }
 
         }
-        else if(Hands[1].CurrentHandPose == HandPose.ScatterPouring && Hands[1].CurrentHandStatus == HandStatus.Draw)
+        else if(Hands[1].CurrentHandPose == HandPose.ScatterPouring && Hands[1].IsDraw)
         {
 
             Color color = SandColor;
@@ -139,7 +139,7 @@ public class SandSimulation : MonoBehaviour
 
             }
         }
-        else if (Hands[1].CurrentHandStatus == HandStatus.Tools)
+        else if (Hands[1].IsTool)
         {
             Displacement(Pen);
             

@@ -5,6 +5,9 @@ using Unity.XR.PXR;
 using System;
 using System.Net.NetworkInformation;
 using CurvedUI;
+using KevinCastejon.HierarchicalFiniteStateMachine;
+using Unity.VisualScripting;
+using TMPro;
 
 public enum HandPose
 {
@@ -38,7 +41,12 @@ public class Hand : MonoBehaviour, ICollision
     //public bool EnableCollisionTest { get; private set; }
 
     public HandPose CurrentHandPose { get; private set; } = HandPose.None;
-    public HandStatus CurrentHandStatus { get; private set; } = HandStatus.Draw;
+    //public HandStatus CurrentHandStatus { get; private set; } = HandStatus.Draw;
+
+    private HandFSM _fsm;
+
+    public TextMeshProUGUI _text;
+
 
     public Bounds HandBound { get; private set; }
     public Vector3 PalmVelocity { get; private set; }
@@ -46,16 +54,24 @@ public class Hand : MonoBehaviour, ICollision
     public Vector3 CenterVelocity => PalmVelocity;
     public Bounds CollisionBound => HandBound;
     public CollisionType CollisionType => CollisionType.Hand;
-    
+
+    public bool IsDraw => _fsm.GetCurrentStateEnumValue<HandState>() == HandState.DRAW;
+    public bool IsTool => _fsm.GetCurrentStateEnumValue<HandState>() == HandState.TOOLS;
+    public bool IsHeight => _fsm.GetCurrentStateEnumValue<HandState>() == HandState.HEIGHT;
+    public bool IsUI => _fsm.GetCurrentStateEnumValue<HandState>() == HandState.UI;
+
+
     public bool DetectCollision()
     {
-        return CurrentHandStatus == HandStatus.Draw;
+        return IsDraw;
     }
 
     public float Strength { private set; get; } 
     public Vector3 SkinnyPouringCenter { private set; get; }
     public Bounds ScatterPouringCenter { private set; get; }
 
+    public SandScatterPouring SandScatterPouring;
+    public SandSkinnyPouring SandSkinnyPouring;
 
     public GameObject HandMesh;
     public Renderer HandRenderer;
@@ -73,18 +89,25 @@ public class Hand : MonoBehaviour, ICollision
     private Dictionary<HandPose, Action> _onHandPoseEnd = new Dictionary<HandPose, Action>();
 
 
+    private void Awake()
+    {
+        _fsm = AbstractHierarchicalFiniteStateMachine.CreateRootStateMachine<HandFSM>("HandStateMachine");
+    }
 
     private void Start()
     {
         IsValid = false; ;
         HandMesh.SetActive(false);
-        //EnableCollisionTest = true;
-        CurrentHandStatus = HandStatus.Draw;
+        _fsm.SetHand(this);
+        _fsm.OnEnter();
         CurrentHandPose = HandPose.None;
     }
 
+   
+
     private void Update()
     {
+        _text.text = _fsm.GetCurrentHierarchicalStatesNamesString();
         UpdateHandJoints();
 
         if (CurrentHandPose == HandPose.SkinnyPouring)
@@ -126,6 +149,8 @@ public class Hand : MonoBehaviour, ICollision
         IndexFingerTipVelocity = (IndexTipTransform.position - _lastIndexFingerTipPosition) / Time.deltaTime;
         _lastPalmPosition = PalmTransform.position;
         _lastIndexFingerTipPosition = IndexTipTransform.position;
+
+        _fsm.OnUpdate();
     }
 
     private void UpdateHandJoints()
@@ -222,34 +247,12 @@ public class Hand : MonoBehaviour, ICollision
 
     private void HandlePoseStart(HandPose state)
     {
-        switch (state)
-        {
-            case HandPose.HandUpward:
-                CurrentHandStatus = HandStatus.HeightAdjusting;
-                break;
-            case HandPose.ToolHolding:
-                CurrentHandStatus = HandStatus.Tools;
-                break;
-            case HandPose.ToolRemoving:
-                CurrentHandStatus = HandStatus.Draw;
-                break;
-            case HandPose.UIActivation:
-                CurrentHandStatus = HandStatus.UI;
-                break;
-        }
+
     }
 
     private void HandlePoseEnd(HandPose state)
     {
-        switch (state)
-        {
-            case HandPose.HandUpward:
-                CurrentHandStatus = HandStatus.Draw;
-                break;
-            case HandPose.UIActivation:
-                CurrentHandStatus = HandStatus.Draw;
-                break;
-        }
+
     }
 
     // TODO: 允许碰撞这一块还有bug！

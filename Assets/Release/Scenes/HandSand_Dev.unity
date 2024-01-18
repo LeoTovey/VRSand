@@ -7957,7 +7957,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1382316997
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -13825,6 +13825,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   handType: 1
+  _text: {fileID: 894785961}
+  SandScatterPouring: {fileID: 566507559}
+  SandSkinnyPouring: {fileID: 344965483}
   HandMesh: {fileID: 6272333002375782490}
   HandRenderer: {fileID: 8449720110071796348}
   IndexTipTransform: {fileID: 1950942191333907946}
@@ -24423,6 +24426,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   handType: 0
+  _text: {fileID: 1538522804}
+  SandScatterPouring: {fileID: 0}
+  SandSkinnyPouring: {fileID: 0}
   HandMesh: {fileID: 314955800572740649}
   HandRenderer: {fileID: 4330366968199647882}
   IndexTipTransform: {fileID: 3510314172903211806}

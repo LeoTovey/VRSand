@@ -37,32 +37,33 @@ public class SandScatterPouring : MonoBehaviour, ISandPouring
     private bool _enabled;
     private float[] _sandAmount = new float[4];
 
+    public void Enable()
+    {
+        _scatterSand.gameObject.SetActive(true);
+        _enabled = true;
+        _progressor.Enable();
+    }
 
+    public void Disable()
+    {
+        _scatterSand.gameObject.SetActive(false);
+        _enabled = false;
+        _progressor.Disable();
+    }
 
     private void Awake()
     {
-        _scatterSand.gameObject.SetActive(false);
+       
+    }
 
-        _hand.BindHandPoseEndCallback(HandPose.ScatterPouring, () =>
-        {
-            if (_hand.CurrentHandStatus == HandStatus.Draw)
-            {
-                _scatterSand.gameObject.SetActive(false);
-                _enabled = false;
-                _progressor.Disable();
-            }
-        });
-
-        _hand.BindHandPoseStartCallback(HandPose.ScatterPouring, () =>
-        {
-            _scatterSand.gameObject.SetActive(true);
-            _enabled = true;
-            _progressor.Enable();
-        });
+    private void Start()
+    {
+        Disable();
     }
 
     private void Update()
     {
+
         if (_enabled)
         {
             _strenth = Mathf.InverseLerp(_minStrength, _maxStrength, _hand.Strength);

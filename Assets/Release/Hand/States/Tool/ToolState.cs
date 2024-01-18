@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 public class ToolState : AbstractState
 {
+    public Hand Hand => GetStateMachine<HandFSM>().Hand;
 
     public override void OnUpdate()
     {

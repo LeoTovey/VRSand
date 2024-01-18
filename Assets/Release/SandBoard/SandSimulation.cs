@@ -14,22 +14,20 @@ public class SandSimulation : MonoBehaviour
 {
     public SandSimulationKernel Kernel;
 
+    public Hand RightHand => _hands.RightHand;
+    public Hand LeftHand => _hands.LeftHand;
 
-    public Hand[] Hands;
-    private List<ICollision> _collisions = new List<ICollision>();
+    [SerializeField] private HandController _hands;
+
 
 
     public Pen Pen;
-    public TextMeshProUGUI testMesh;
-
+  
 
     public RawImage ColorHandleImage;
     public Color SandColor;
 
     public Transform CollisionPlane;
-
-    [SerializeField] private SandScatterPouring _sandScatterPouring;
-    [SerializeField] private SandSkinnyPouring _sandSkinnyPouring;
 
     // for simulation
     public float InitHeight = 0.5f;
@@ -51,14 +49,11 @@ public class SandSimulation : MonoBehaviour
 
     private void Awake()
     {
-        Application.targetFrameRate = -1;
+        //Application.targetFrameRate = -1;
     }
 
     void Start()
     {
-        _collisions.Add(Hands[0]);
-        _collisions.Add(Hands[1]);
-
 
     }
 
@@ -101,57 +96,42 @@ public class SandSimulation : MonoBehaviour
 
         Kernel.ResetUpdateArea();
 
-
-
-        if (Hands[1].CurrentHandPose == HandPose.SkinnyPouring && Hands[1].IsDraw)
+        if (RightHand.CurrentHandPose == HandPose.SkinnyPouring && RightHand.CurrentHandState == HandState.DRAW)
         {
 
 
-            if (_sandSkinnyPouring.Strenth > 0.0f)
+            if (RightHand.SandSkinnyPouring.Strength > 0.0f)
             {
  
-                Bounds bounds = Hands[1].HandBound;
+                Bounds bounds = RightHand.HandBound;
 
                 if (IsIntersectXZ(bounds))
                 { 
- 
-                    Kernel.SkinnyPouring(bounds, CollisionPlane, _sandSkinnyPouring.PouringCenter, _sandSkinnyPouring.SandAmount, SandRadius);
-
+                    Kernel.SkinnyPouring(bounds, CollisionPlane, RightHand.SandSkinnyPouring.PouringCenter, RightHand.SandSkinnyPouring.SandAmount, SandRadius);
                 }
             }
 
         }
-        else if(Hands[1].CurrentHandPose == HandPose.ScatterPouring && Hands[1].IsDraw)
+        else if(RightHand.CurrentHandPose == HandPose.ScatterPouring && RightHand.CurrentHandState == HandState.DRAW)
         {
-
-            Color color = SandColor;
-            color.a = _sandScatterPouring.Strenth * 0.2f;
-            if (_sandScatterPouring.Strenth > 0.0f)
+            if (RightHand.SandScatterPouring.Strength > 0.0f)
             {
-                Bounds bounds = Hands[1].ScatterPouringCenter;
+                Bounds bounds = RightHand.ScatterPouringCenter;
                 if (IsIntersectXZ(bounds))
                 {
-
-
-                    Kernel.ScatterPouring(bounds, CollisionPlane, _sandScatterPouring.SandAmount);
-
+                    Kernel.ScatterPouring(bounds, CollisionPlane, RightHand.SandScatterPouring.SandAmount);
                 }
 
             }
         }
-        else if (Hands[1].IsTool)
+        else if (RightHand.CurrentHandState == HandState.TOOLS)
         {
             Displacement(Pen);
-            
         }
         else
         {
-            for (int c = 0; c < Hands.Length; c++)
-            {
-                Displacement(Hands[c]);
-            }
-            
-
+            Displacement(RightHand);
+            Displacement(LeftHand);
         }
 
         if (Kernel.IsAreaUpdated())

@@ -1,10 +1,7 @@
 ﻿using KevinCastejon.HierarchicalFiniteStateMachine;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
+using UnityEngine;
+
 public enum DrawState
 {
     SCATTER_POUR,
@@ -41,8 +38,6 @@ public class PaintState : AbstractState
 {
     public override void OnUpdate()
     {
-
-        Debug.WriteLine(GetStateMachine<DrawMainState>().Hand.CurrentHandPose);
         HandPose CurrentHandPose = GetStateMachine<DrawMainState>().Hand.CurrentHandPose;
         if (CurrentHandPose == HandPose.HandUpward || CurrentHandPose == HandPose.ToolHolding || CurrentHandPose == HandPose.UIActivation)
         {
@@ -68,7 +63,6 @@ public class SkinnyPourState : AbstractState
 {
     public override void OnEnter()
     {
-
         GetStateMachine<DrawMainState>().Hand.SandSkinnyPouring?.Enable();
     }
     public override void OnExit()
@@ -78,6 +72,9 @@ public class SkinnyPourState : AbstractState
 
     public override void OnUpdate()
     {
+        Hand hand = GetStateMachine<DrawMainState>().Hand;
+        hand.SandSkinnyPouring?.OnUpdate(hand.Strength, hand.SkinnyPouringCenter, hand.SandColor);
+
         HandPose CurrentHandPose = GetStateMachine<DrawMainState>().Hand.CurrentHandPose;
         if (CurrentHandPose == HandPose.HandUpward || CurrentHandPose == HandPose.ToolHolding || CurrentHandPose == HandPose.UIActivation)
         {
@@ -113,7 +110,9 @@ public class ScatterPourState : AbstractState
 
     public override void OnUpdate()
     {
-        HandPose CurrentHandPose = GetStateMachine<DrawMainState>().Hand.CurrentHandPose;
+        Hand hand = GetStateMachine<DrawMainState>().Hand;
+        hand.SandScatterPouring?.OnUpdate(hand.Strength, hand.PalmTransform.position, hand.SandColor);
+        HandPose CurrentHandPose = hand.CurrentHandPose;
         if (CurrentHandPose == HandPose.HandUpward || CurrentHandPose == HandPose.ToolHolding || CurrentHandPose == HandPose.UIActivation)
         {
             TransitionToState(EXIT);

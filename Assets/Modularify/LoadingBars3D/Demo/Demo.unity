@@ -329,7 +329,6 @@ MonoBehaviour:
   _loadingSegments: {fileID: 1300626590}
   _loadingBarStraight: {fileID: 179780951}
   _loadingBarParts: {fileID: 194260606}
-  _speed: 1
 --- !u!21 &156020228
 Material:
   serializedVersion: 8
@@ -983,7 +982,7 @@ PrefabInstance:
     - target: {fileID: 1255189114688956198, guid: a509e19a80feb454594336c10bf4f7ee,
         type: 3}
       propertyPath: _numberOfParts
-      value: 10
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1255189114688956198, guid: a509e19a80feb454594336c10bf4f7ee,
         type: 3}

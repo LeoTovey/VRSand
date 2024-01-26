@@ -144,11 +144,11 @@ Shader"Custom/S_SandBoardShader"
                 //float intensity = abs(sin(_Time.y)) * 0.5 + 0.5;
                 //half3 backColor = lerp(_BackGround.rgb, _GlowColor.rgb, intensity);
                 half4 height = tex2D(_HeightMap, uv).rgba;
-                //half3 sandColor = half3(0.0, 0.0, 0.0);
+                half3 sandColor = half3(0.0, 0.0, 0.0);
 
                 if (height.a > 0.0)
                 {
-                    //sandColor = height.rgb / height.a;
+                    sandColor = height.rgb / height.a;
                 }
 
 
@@ -185,8 +185,8 @@ Shader"Custom/S_SandBoardShader"
     
                 noise = clamp(noise, 0.0, 1.0);
                 
-                //half3 finalColor = lerp(_BackGround, sandColor, sandHeight * noise.r);
-                half3 finalColor = lerp(_BackGround, _SandColor, sandHeight * noise.r);
+                half3 finalColor = lerp(_BackGround, sandColor, sandHeight * noise.r);
+                //half3 finalColor = lerp(_BackGround, _SandColor, sandHeight * noise.r);
 
                 half4 tags = tex2D( _DisplacementHeightMap, uv).rgba;
                 half4 color = half4(finalColor, 1.0) + tags;

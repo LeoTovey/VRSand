@@ -46,6 +46,7 @@ public class SandSimulationKernel : MonoBehaviour
 
     public int MapWidth => _collisionMapWidth;
     public int MapHeight => _collisionMapHeight;
+    public float UpdateArea => _updateArea.Area;
 
     // for simulation
     public float InitHeight = 0.5f;

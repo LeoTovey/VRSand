@@ -79,8 +79,6 @@ public class SandPouring
             {
                 _sandEffect.gameObject.SetActive(false);
             }
-
-            
         }
     }
 

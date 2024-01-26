@@ -23,6 +23,7 @@ public class SandSkinnyPouring : SandPouring
     public override void OnPouringUpdate(Color sandColor)
     {
         var main = _sandEffect.main;
+        sandColor.a = _strength;
         main.startColor = sandColor;
         main.simulationSpeed = _strength;
 

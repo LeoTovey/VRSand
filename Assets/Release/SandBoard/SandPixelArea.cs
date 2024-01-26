@@ -13,6 +13,8 @@ public class SandPixelArea
 
     public int Width => MaxX - MinX + 1;
     public int Height => MaxY - MinY + 1;
+
+    public int Area => Width * Height;
     public bool IsEmpty() => MinX >= MaxX || MinY >= MaxY;
     private int[] _startId;
     private int[] _endId;

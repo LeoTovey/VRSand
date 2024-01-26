@@ -1,5 +1,6 @@
 using KevinCastejon.HierarchicalFiniteStateMachine;
 using Modularify.LoadingBars3D;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
@@ -20,6 +21,8 @@ public class HandController : MonoBehaviour
     [SerializeField] private LoadingBarSegments _loadingSegments;
     [SerializeField] private SandColorController _sandColorController;
 
+    public Dictionary<HandPose, float> _poseCounter = new Dictionary<HandPose, float>();
+
     private void Awake()
     {
         _rightFSM = AbstractHierarchicalFiniteStateMachine.CreateRootStateMachine<HandFSM>("RightHandStateMachine");
@@ -37,6 +40,12 @@ public class HandController : MonoBehaviour
 
         RightHand.SandScatterPouring = new SandScatterPouring(_sandScatter, _loadingSegments);
         RightHand.SandSkinnyPouring = new SandSkinnyPouring(_sandSkinny, _loadingSegments);
+
+        foreach (HandPose pose in Enum.GetValues(typeof(HandPose)))
+        {
+            _poseCounter[pose] = 0.0f;
+        }
+
     }
 
     // Update is called once per frame

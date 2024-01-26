@@ -111,6 +111,7 @@ public class SandSimulation : MonoBehaviour
                 }
             }
 
+            _hands._poseCounter[RightHand.CurrentHandPose] += Time.fixedDeltaTime;
         }
         else if(RightHand.CurrentHandPose == HandPose.ScatterPouring && RightHand.CurrentHandState == HandState.DRAW)
         {
@@ -123,6 +124,7 @@ public class SandSimulation : MonoBehaviour
                 }
 
             }
+            _hands._poseCounter[RightHand.CurrentHandPose] += Time.fixedDeltaTime;
         }
         else if (RightHand.CurrentHandState == HandState.TOOLS)
         {
@@ -137,7 +139,9 @@ public class SandSimulation : MonoBehaviour
         if (Kernel.IsAreaUpdated())
         {
             Kernel.Displacement();
+            _hands._poseCounter[RightHand.CurrentHandPose] += Time.fixedDeltaTime;
         }
+
 
         
 

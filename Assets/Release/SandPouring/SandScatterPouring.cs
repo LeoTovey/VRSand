@@ -29,6 +29,7 @@ public class SandScatterPouring : SandPouring
     public override void OnPouringUpdate(Color sandColor)
     {
         var main = _sandEffect.main;
+        sandColor.a = _strength * _alpha;
         main.startColor = sandColor;
 
         _loadingSegments.transform.position = _pouringCenter + new Vector3(0.0f, 0.08f, 0);

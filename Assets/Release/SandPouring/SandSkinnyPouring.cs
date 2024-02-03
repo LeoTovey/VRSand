@@ -5,13 +5,11 @@ using UnityEngine;
 
 public class SandSkinnyPouring : SandPouring
 {
-    public override float MaxStrength => _maxStrength;
-    public override float MinStrength => _minStrength;
+
     public override float PouringVelocity => _skinnySandVelocity;
     public override float Alpha => _alpha;
 
-    private float _maxStrength = 0.06f;
-    private float _minStrength = 0.02f;
+
     private float _skinnySandVelocity = 0.5f;
     private float _alpha = 1.0f;
 

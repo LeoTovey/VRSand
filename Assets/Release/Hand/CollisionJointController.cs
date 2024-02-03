@@ -26,32 +26,24 @@ public class CollisionJointController : MonoBehaviour
         int ToolsLayer = LayerMask.NameToLayer("Tools");
         int JointsLayer = LayerMask.NameToLayer("Joints");
 
-        FingerCarving.SetActive(false);
-        FingertipTracing.SetActive(false);
+        //FingerCarving.SetActive(false);
+        //FingertipTracing.SetActive(false);
 
         jointCullingMask = 1 << CollisionPlaneLayer | 1 << ToolsLayer | 1 << JointsLayer;
         handCullingMask = 1 << CollisionPlaneLayer | 1 << ToolsLayer | 1 << HandsLayer;
-        CollisionCamera.cullingMask = handCullingMask;
+        //CollisionCamera.cullingMask = handCullingMask;
 
         RightHand.BindHandPoseStartCallback(HandPose.FingerCarving, () => {
-            FingerCarving.SetActive(true);
-            CollisionCamera.cullingMask = jointCullingMask;
+            //FingerCarving.SetActive(true);
+            //CollisionCamera.cullingMask = jointCullingMask;
         });
 
         RightHand.BindHandPoseEndCallback(HandPose.FingerCarving, () => {
-            FingerCarving.SetActive(false);
-            CollisionCamera.cullingMask = handCullingMask;
+            //FingerCarving.SetActive(false);
+            //CollisionCamera.cullingMask = handCullingMask;
         });
 
-        RightHand.BindHandPoseStartCallback(HandPose.FingertipTracing, () => {
-            FingertipTracing.SetActive(true);
-            CollisionCamera.cullingMask = jointCullingMask;
-        });
 
-        RightHand.BindHandPoseEndCallback(HandPose.FingertipTracing, () => {
-            FingertipTracing.SetActive(false);
-            CollisionCamera.cullingMask = handCullingMask;
-        });
     }
 
     // Update is called once per frame

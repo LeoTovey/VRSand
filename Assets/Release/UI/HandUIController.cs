@@ -37,11 +37,11 @@ public class HandUIController : MonoBehaviour
 
     public void DisActiveUI()
     {
-        LeftHandUI.gameObject.SetActive(false);
+        //LeftHandUI.gameObject.SetActive(false);
     }
 
     public void ActiveUI()
     {
-        LeftHandUI.gameObject.SetActive(true);
+        //LeftHandUI.gameObject.SetActive(true);
     }
 }

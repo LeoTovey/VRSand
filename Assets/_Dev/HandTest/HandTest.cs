@@ -12,7 +12,7 @@ public class HandTest : MonoBehaviour
    [SerializeField] public TextMeshProUGUI _textMesh;
 
     // 0 for left 1 for right
-    private int _handType = 0;
+    private int _handType = 1;
     private StreamWriter _localWriter;
     private int _totalFrame = 0;
     private int _frameCount = 0;

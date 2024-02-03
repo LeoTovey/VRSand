@@ -185,8 +185,8 @@ Shader"Custom/S_SandBoardShader"
     
                 noise = clamp(noise, 0.0, 1.0);
                 
-                half3 finalColor = lerp(_BackGround, sandColor, sandHeight * noise.r);
-                //half3 finalColor = lerp(_BackGround, _SandColor, sandHeight * noise.r);
+                //half3 finalColor = lerp(_BackGround, sandColor, sandHeight * noise.r);
+                half3 finalColor = lerp(_BackGround, _SandColor, sandHeight * noise.r);
 
                 half4 tags = tex2D( _DisplacementHeightMap, uv).rgba;
                 half4 color = half4(finalColor, 1.0) + tags;

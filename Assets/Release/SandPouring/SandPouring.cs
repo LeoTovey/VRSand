@@ -4,9 +4,6 @@ using UnityEngine;
 
 public class SandPouring
 {
-
-    public virtual float MaxStrength { get; }
-    public virtual float MinStrength { get; }
     public virtual float PouringVelocity { get; }
     public virtual float Alpha { get; }
  
@@ -58,7 +55,7 @@ public class SandPouring
     {
         if (_enabled)
         {
-            _strength = Mathf.InverseLerp(MinStrength, MaxStrength, strength);
+            _strength = Mathf.Clamp(strength, 0.0f, 1.0f);
             _loadingSegments.SetPercentage(_strength);
             _loadingSegments.transform.position = pouringCenter;
             if (_strength > 0.0f)

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Modularify.LoadingBars3D;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,9 +12,11 @@ public class Pen : MonoBehaviour, ICollision
 {
     public Vector3 CenterVelocity => _velocity;
     public Bounds CollisionBound => _penMesh.bounds;
-    public CollisionType CollisionType => CollisionType.Tool;
 
     private MeshRenderer _penMesh;
+
+    [SerializeField] private LoadingBarStraight _loading;
+
     private Vector3 _velocity ;
 
     private void Awake()

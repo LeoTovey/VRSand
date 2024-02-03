@@ -35,7 +35,7 @@ public class HandFSM : AbstractHierarchicalFiniteStateMachine
     {
         switch (Hand.CurrentHandPose)
         {
-            case HandPose.HandUpward:
+            case HandPose.HandUpward: 
                 TransitionToState(HandState.HEIGHT);
                 break;
             case HandPose.ToolHolding:

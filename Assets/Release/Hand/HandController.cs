@@ -13,8 +13,7 @@ public class HandController : MonoBehaviour
 
     private HandFSM _rightFSM;
     private HandFSM _leftFSM;
-    public TextMeshProUGUI _leftText;
-    public TextMeshProUGUI _rightText;
+    public TextMeshProUGUI _text;
 
     [SerializeField] private ParticleSystem _sandScatter;
     [SerializeField] private ParticleSystem _sandSkinny;
@@ -51,8 +50,7 @@ public class HandController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        _leftText.text = _leftFSM.GetCurrentHierarchicalStatesNamesString();
-        _rightText.text = _rightFSM.GetCurrentHierarchicalStatesNamesString();
+        _text.text = "Left : "  + _leftFSM.GetCurrentHierarchicalStatesNamesString() + "\n" + "Right : " + _rightFSM.GetCurrentHierarchicalStatesNamesString() + "\n";
         _leftFSM.OnUpdate();
         _rightFSM.OnUpdate();
         LeftHand.CurrentHandState = _leftFSM.GetCurrentStateEnumValue<HandState>();
@@ -105,7 +103,6 @@ public class HandController : MonoBehaviour
         switch (state)
         {
             case HandPose.FingerCarving:
-                //CollisionCamera.cullingMask = jointCullingMask;
                 break;
         }
     }
@@ -115,7 +112,6 @@ public class HandController : MonoBehaviour
         switch (state)
         {
             case HandPose.FingerCarving:
-                //CollisionCamera.cullingMask = handCullingMask;
                 break;
         }
     }

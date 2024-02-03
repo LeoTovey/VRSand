@@ -11,13 +11,11 @@ using UnityEngine.XR.Interaction.Toolkit.AffordanceSystem.Jobs;
 public class SandScatterPouring : SandPouring
 {
 
-    public override float MaxStrength => _maxStrength;
-    public override float MinStrength => _minStrength;
+
     public override float PouringVelocity => _scatterSandVelocity;
     public override float Alpha => _alpha;
 
-    private float _maxStrength = 0.06f;
-    private float _minStrength = 0.02f;
+
     private float _scatterSandVelocity = 0.04f;
     private float _alpha = 0.2f;
 

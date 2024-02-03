@@ -19,11 +19,6 @@ public class SandSimulation : MonoBehaviour
 
     [SerializeField] private HandController _hands;
 
-
-
-    public Pen Pen;
-  
-
     public RawImage ColorHandleImage;
     public Color SandColor;
 
@@ -96,6 +91,8 @@ public class SandSimulation : MonoBehaviour
 
         Kernel.ResetUpdateArea();
 
+        bool usePen = false;
+
         if (RightHand.CurrentHandPose == HandPose.SkinnyPouring && RightHand.CurrentHandState == HandState.DRAW)
         {
 
@@ -126,9 +123,15 @@ public class SandSimulation : MonoBehaviour
             }
             _hands._poseCounter[RightHand.CurrentHandPose] += Time.fixedDeltaTime;
         }
-        else if (RightHand.CurrentHandState == HandState.TOOLS)
+        else if (LeftHand.CurrentHandState == HandState.TOOLS && LeftHand.Pen.gameObject.activeSelf)
         {
-            Displacement(Pen);
+            Displacement(LeftHand.Pen);
+            usePen = true;
+        }
+        else if (RightHand.CurrentHandState == HandState.TOOLS && RightHand.Pen.gameObject.activeSelf)
+        {
+            Displacement(RightHand.Pen);
+            usePen = true;
         }
         else
         {
@@ -139,7 +142,14 @@ public class SandSimulation : MonoBehaviour
         if (Kernel.IsAreaUpdated())
         {
             Kernel.Displacement();
-            _hands._poseCounter[RightHand.CurrentHandPose] += Time.fixedDeltaTime;
+            if (usePen == true)
+            {
+                _hands._poseCounter[HandPose.ToolHolding] += Time.fixedDeltaTime;
+            }
+            else
+            {
+                _hands._poseCounter[RightHand.CurrentHandPose] += Time.fixedDeltaTime;
+            }
         }
 
 

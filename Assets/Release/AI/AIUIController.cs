@@ -24,6 +24,8 @@ public class AIUIController : MonoBehaviour
     private Dictionary<HandPose, bool> _finished = new Dictionary<HandPose, bool>();
     [SerializeField] private HandController _hands;
 
+    private bool _enabled = true;
+
     void Start()
     {
         foreach (var pair in prefabList)
@@ -39,84 +41,90 @@ public class AIUIController : MonoBehaviour
 
     void Update()
     {
-        if (!_finished[HandPose.ScatterPouring])
+
+
+        if (_enabled)
         {
-            UpdatePrefab(HandPose.ScatterPouring, _hands._poseCounter[HandPose.ScatterPouring]);
-
-            if (_currentPrefabs[HandPose.ScatterPouring].Finished)
+            if (!_finished[HandPose.ScatterPouring])
             {
-                DeletePrefab(HandPose.ScatterPouring);
-            }
-        }
+                UpdatePrefab(HandPose.ScatterPouring, _hands._poseCounter[HandPose.ScatterPouring]);
 
-        if (!_finished[HandPose.SkinnyPouring])
-        {
-            UpdatePrefab(HandPose.SkinnyPouring, _hands._poseCounter[HandPose.SkinnyPouring]);
-
-            if (_currentPrefabs[HandPose.SkinnyPouring].Finished)
-            {
-                DeletePrefab(HandPose.SkinnyPouring);
-            }
-        }
-
-        if (_finished[HandPose.ScatterPouring] && _finished[HandPose.SkinnyPouring])
-        {
-
-            if (!_finished[HandPose.PalmRubbing])
-            {
-                UpdatePrefab(HandPose.PalmRubbing, _hands._poseCounter[HandPose.PalmRubbing]);
-
-                if (_currentPrefabs[HandPose.PalmRubbing].Finished)
+                if (_currentPrefabs[HandPose.ScatterPouring].Finished)
                 {
-                    DeletePrefab(HandPose.PalmRubbing);
+                    DeletePrefab(HandPose.ScatterPouring);
                 }
             }
 
-            if (!_finished[HandPose.HandSweeping])
+            if (!_finished[HandPose.SkinnyPouring])
             {
-                UpdatePrefab(HandPose.HandSweeping, _hands._poseCounter[HandPose.HandSweeping]);
+                UpdatePrefab(HandPose.SkinnyPouring, _hands._poseCounter[HandPose.SkinnyPouring]);
 
-                if (_currentPrefabs[HandPose.HandSweeping].Finished)
+                if (_currentPrefabs[HandPose.SkinnyPouring].Finished)
                 {
-                    DeletePrefab(HandPose.HandSweeping);
+                    DeletePrefab(HandPose.SkinnyPouring);
                 }
             }
 
-
-            if (_finished[HandPose.PalmRubbing] && _finished[HandPose.HandSweeping])
+            if (_finished[HandPose.ScatterPouring] && _finished[HandPose.SkinnyPouring])
             {
-                if (!_finished[HandPose.ToolHolding])
-                {
-                    UpdatePrefab(HandPose.ToolHolding, _hands._poseCounter[HandPose.ToolHolding]);
 
-                    if (_currentPrefabs[HandPose.ToolHolding].Finished)
+                if (!_finished[HandPose.PalmRubbing])
+                {
+                    UpdatePrefab(HandPose.PalmRubbing, _hands._poseCounter[HandPose.PalmRubbing]);
+
+                    if (_currentPrefabs[HandPose.PalmRubbing].Finished)
                     {
-                        DeletePrefab(HandPose.ToolHolding);
+                        DeletePrefab(HandPose.PalmRubbing);
                     }
                 }
 
-                if (!_finished[HandPose.FingertipTracing])
+                if (!_finished[HandPose.HandSweeping])
                 {
-                    UpdatePrefab(HandPose.FingertipTracing, _hands._poseCounter[HandPose.FingertipTracing]);
+                    UpdatePrefab(HandPose.HandSweeping, _hands._poseCounter[HandPose.HandSweeping]);
 
-                    if (_currentPrefabs[HandPose.FingertipTracing].Finished)
+                    if (_currentPrefabs[HandPose.HandSweeping].Finished)
                     {
-                        DeletePrefab(HandPose.FingertipTracing);
+                        DeletePrefab(HandPose.HandSweeping);
                     }
                 }
 
 
-                if (!_finished[HandPose.FingerCarving])
+                if (_finished[HandPose.PalmRubbing] && _finished[HandPose.HandSweeping])
                 {
-                    UpdatePrefab(HandPose.FingerCarving, _hands._poseCounter[HandPose.FingerCarving]);
-
-                    if (_currentPrefabs[HandPose.FingerCarving].Finished)
+                    if (!_finished[HandPose.ToolHolding])
                     {
-                        DeletePrefab(HandPose.FingerCarving);
+                        UpdatePrefab(HandPose.ToolHolding, _hands._poseCounter[HandPose.ToolHolding]);
+
+                        if (_currentPrefabs[HandPose.ToolHolding].Finished)
+                        {
+                            DeletePrefab(HandPose.ToolHolding);
+                        }
+                    }
+
+                    if (!_finished[HandPose.FingertipTracing])
+                    {
+                        UpdatePrefab(HandPose.FingertipTracing, _hands._poseCounter[HandPose.FingertipTracing]);
+
+                        if (_currentPrefabs[HandPose.FingertipTracing].Finished)
+                        {
+                            DeletePrefab(HandPose.FingertipTracing);
+                        }
+                    }
+
+
+                    if (!_finished[HandPose.FingerCarving])
+                    {
+                        UpdatePrefab(HandPose.FingerCarving, _hands._poseCounter[HandPose.FingerCarving]);
+
+                        if (_currentPrefabs[HandPose.FingerCarving].Finished)
+                        {
+                            DeletePrefab(HandPose.FingerCarving);
+                        }
                     }
                 }
-            }
 
+
+            }
 
         }
 
@@ -162,7 +170,6 @@ public class AIUIController : MonoBehaviour
         GameObject newPrefabInstance = Instantiate(_prefabRepo[objectType], _aiTipsParent);
         _currentPrefabs[objectType] = newPrefabInstance.GetComponent<AiTip>();
         _currentPrefabs[objectType].SetTime(0.0f);
-        _currentPrefabs[objectType].SetText(" " + objectType);
     }
 
 

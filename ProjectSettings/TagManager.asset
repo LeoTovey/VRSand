@@ -15,7 +15,7 @@ TagManager:
   - CollisionPlane
   - Hands
   - Tools
-  - Joints
+  - PhysicsMesh
   - 
   - 
   - 

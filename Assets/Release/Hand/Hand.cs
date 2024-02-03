@@ -8,6 +8,7 @@ using CurvedUI;
 using KevinCastejon.HierarchicalFiniteStateMachine;
 using Unity.VisualScripting;
 using TMPro;
+using Modularify.LoadingBars3D;
 
 public enum HandPose
 {
@@ -37,24 +38,36 @@ public class Hand : MonoBehaviour, ICollision
     public HandState CurrentHandState = HandState.DRAW;
 
 
+    public GameObject FingertipTracing;
+    public GameObject FingerCarving;
+    public GameObject PhysicsMesh;
+
+
     public Bounds HandBound { get; private set; }
     public Vector3 PalmVelocity { get; private set; }
     public Vector3 IndexFingerTipVelocity { get; private set; }
     public Vector3 CenterVelocity => PalmVelocity;
     public Bounds CollisionBound => HandBound;
-    public CollisionType CollisionType => CollisionType.Hand;
 
     public bool DetectCollision()
     {
         return CurrentHandState == HandState.DRAW;
     }
 
-    public float Strength { private set; get; } 
+    public float Strength { private set; get; }
+    [SerializeField] float _maxAngle = 50.0f;
+    [SerializeField] float _minAngle = 20.0f;
+
     public Vector3 SkinnyPouringCenter { private set; get; }
     public Bounds ScatterPouringCenter { private set; get; }
 
     public SandPouring SandScatterPouring;
     public SandPouring SandSkinnyPouring;
+    public Pen Pen;
+    public LoadingBarSegments PenLoading;
+
+    public float MaxLoadingTime = 1.0f;
+    public float CurrentLoadingTime = 0.0f;
 
     public Color SandColor;
 
@@ -75,7 +88,7 @@ public class Hand : MonoBehaviour, ICollision
     private Dictionary<HandPose, Action> _onHandPoseStart = new Dictionary<HandPose, Action>();
     private Dictionary<HandPose, Action> _onHandPoseUpdate = new Dictionary<HandPose, Action>();
     private Dictionary<HandPose, Action> _onHandPoseEnd = new Dictionary<HandPose, Action>();
-    
+
 
     private void Awake()
     {
@@ -276,8 +289,11 @@ public class Hand : MonoBehaviour, ICollision
     
     private void UpdateAimState()
     {
-        Strength = Vector3.Distance(_handJointLocations.jointLocations[5].pose.Position.ToVector3() ,_handJointLocations.jointLocations[8].pose.Position.ToVector3());
+        //Strength = Vector3.Distance(_handJointLocations.jointLocations[5].pose.Position.ToVector3() ,_handJointLocations.jointLocations[8].pose.Position.ToVector3());
+        Vector3 line1Direction = (handJoints[(int)HandJoint.JointThumbTip].position - handJoints[(int)HandJoint.JointThumbProximal].position).normalized;
+        Vector3 line2Direction = (handJoints[(int)HandJoint.JointIndexIntermediate].position - handJoints[(int)HandJoint.JointIndexTip].position).normalized;
+        float angleRadians = Mathf.Acos(Vector3.Dot(line1Direction, line2Direction));
+        float angleDegrees = Mathf.Rad2Deg * angleRadians;
+        Strength = Mathf.InverseLerp(_minAngle, _maxAngle, angleDegrees);
     }
-
-
 }

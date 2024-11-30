@@ -21,7 +21,7 @@ public class HandController : MonoBehaviour
     [SerializeField] private SandColorController _sandColorController;
 
     public Dictionary<HandPose, float> _poseCounter = new Dictionary<HandPose, float>();
-
+ 
     private void Awake()
     {
         _rightFSM = AbstractHierarchicalFiniteStateMachine.CreateRootStateMachine<HandFSM>("RightHandStateMachine");

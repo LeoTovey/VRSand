@@ -10,21 +10,28 @@ using UnityEngine;
 
 public class Pen : MonoBehaviour, ICollision
 {
-    public Vector3 CenterVelocity => _velocity;
     public Bounds CollisionBound => _penMesh.bounds;
+    public Vector3 Movement => Vector3.zero;
 
     private MeshRenderer _penMesh;
 
     [SerializeField] private LoadingBarStraight _loading;
 
-    private Vector3 _velocity ;
+    private Vector3 _movement;
+    private Vector3 _lastPosition;
 
     private void Awake()
     {
         _penMesh = GetComponent<MeshRenderer>();
+        _lastPosition = transform.position;
     }
 
-    public void SetVelocity(Vector3 velocity) => _velocity = velocity;
-
+    private void Update()
+    {
+        _movement += transform.position - _lastPosition;
+        _lastPosition = transform.position;
+    }
+    
     public bool DetectCollision() => true;
+    public void ClearMovement() => _movement = Vector3.zero;
 }

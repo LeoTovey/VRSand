@@ -31,8 +31,11 @@ public class SandScatterPouring : SandPouring
         main.startColor = sandColor;
 
         _loadingSegments.transform.position = _pouringCenter + new Vector3(0.0f, 0.08f, 0);
-        Vector3 cameraPos = Camera.main.transform.position;
-        _loadingSegments.transform.LookAt(cameraPos);
+        if (Camera.main != null)
+        {
+            Vector3 cameraPos = Camera.main.transform.position;
+            _loadingSegments.transform.LookAt(cameraPos);
+        }
     }
 
 }

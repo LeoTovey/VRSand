@@ -52,14 +52,27 @@ float slopeThreshold;
 //#define one_third 0.33333;
 
 
+float4 MixSandColor(float4 oldValue, float4 newValue, float multiplier)
+{
+    float oldHeight = oldValue.w;
+    float3 oldColor = oldValue.xyz;
+    float3 newColor = newValue.xyz;
+    float newHeight = newValue.w * multiplier;
+    float mixedHeight = oldHeight + newHeight;
+    float3 mixedColor = oldHeight * oldColor + newHeight * newColor;
+    if (mixedHeight > 0)
+    {
+        mixedColor /= mixedHeight;
+        mixedHeight = clamp(mixedHeight, 0.0f, 1.0f);
+    }
+    return float4(mixedColor, mixedHeight);
+}
+
+
 [numthreads(8,8,1)]
 void Init (uint3 DispatchThreadID : SV_DispatchThreadID)
 {
-    float rgbSum = InitColor.r + InitColor.g + InitColor.b;
-    float rSand = InitHeight * InitColor.r / rgbSum;
-    float gSand = InitHeight * InitColor.g / rgbSum;
-    float bSand = InitHeight * InitColor.b / rgbSum;
-    Height[DispatchThreadID.xy] = float4(0.0, 0.0, 0.0, InitHeight);
+    Height[DispatchThreadID.xy] = float4(InitColor.rgb, InitHeight);
     DisplacementHeightX[DispatchThreadID.xy] = 0;
     DisplacementHeightY[DispatchThreadID.xy] = 0;
 }
@@ -87,11 +100,12 @@ void CollisionTest(uint3 DispatchThreadID : SV_DispatchThreadID)
     if (collisionTag > 0.0001)
     {
         float4 height = Height[id];
-        DisplacementHeightY[id] = height * DisplacementRatio.y;
-        DisplacementHeightX[id] = height * DisplacementRatio.x;
+        float3 sandColor =  height.xyz;
+        float sandHeight = height.w;
+        DisplacementHeightY[id] = float4(sandColor, sandHeight * DisplacementRatio.y);
+        DisplacementHeightX[id] = float4(sandColor, sandHeight * DisplacementRatio.x);
         Height[id] = 0;
     }
-
 }
 
 
@@ -104,7 +118,7 @@ void CollisionTest(uint3 DispatchThreadID : SV_DispatchThreadID)
     uint2 collisonMapId = uint2(id.x, CollisionMapSize.y - id.y - 1);
     if (Collision[collisonMapId] > 0.0)
     {
-        DisplacementHeightY[nextId] += DisplacementHeightY[id];
+        DisplacementHeightY[nextId] = MixSandColor(DisplacementHeightY[nextId], DisplacementHeightY[id], 1.0f);
         DisplacementHeightY[id] = 0;
     }
  }
@@ -117,7 +131,7 @@ void CollisionTest(uint3 DispatchThreadID : SV_DispatchThreadID)
     uint2 collisonMapId = uint2(id.x, CollisionMapSize.y - id.y - 1);
     if (Collision[collisonMapId] > 0.0)
     {
-        DisplacementHeightX[nextId] += DisplacementHeightX[id];
+        DisplacementHeightX[nextId] = MixSandColor(DisplacementHeightX[nextId], DisplacementHeightX[id], 1.0f);
         DisplacementHeightX[id] = 0;
     }
  }
@@ -126,8 +140,8 @@ void CollisionTest(uint3 DispatchThreadID : SV_DispatchThreadID)
  void Displacement(uint3 DispatchThreadID : SV_DispatchThreadID, uint3 GroupID : SV_GroupID)
  {
     uint2 id = uint2(DispatchThreadID.x + StartId.x, DispatchThreadID.y + StartId.y);
-    Height[id] += DisplacementHeightY[id] + DisplacementHeightX[id];
-    Height[id] = clamp(Height[id], 0.0, MaxHeight);
+    float4 displacement = MixSandColor(DisplacementHeightX[id], DisplacementHeightY[id], 1.0f);
+    Height[id] = MixSandColor(Height[id], displacement, 1.0f);
     DisplacementHeightY[id] = 0;
     DisplacementHeightX[id] = 0;
  }
@@ -284,14 +298,16 @@ void CollisionTest(uint3 DispatchThreadID : SV_DispatchThreadID)
 
 
 
+
  [numthreads(8, 8, 1)]
  void SkinnyPouring(uint3 DispatchThreadID : SV_DispatchThreadID, uint3 GroupID : SV_GroupID)
  {
     uint2 id = uint2(DispatchThreadID.x + StartId.x, DispatchThreadID.y + StartId.y);
     float dist = distance(SandCenter, id);
-    float power = saturate(1.0 - dist / SandRadius);
-    Height[id] += SandAmount * power;
-    Height[id] = clamp(Height[id], 0.0, MaxHeight);
+    if (dist < SandRadius)
+    {
+        Height[id] = MixSandColor(Height[id], SandAmount, 1.0);
+    }
  }
 
  [numthreads(8, 8, 1)]
@@ -299,9 +315,11 @@ void CollisionTest(uint3 DispatchThreadID : SV_DispatchThreadID)
  {
     uint2 id = uint2(DispatchThreadID.x + StartId.x, DispatchThreadID.y + StartId.y);
     float dist = distance(id, SandCenter);
-    float power = saturate(1.0 - dist / SandRadius);
-    Height[id] += SandAmount * power;
-    Height[id] = clamp(Height[id], 0.0, MaxHeight);
+    if (dist < SandRadius)
+    {
+        float power = saturate(1.0 - dist / SandRadius);
+        Height[id] = MixSandColor(Height[id], SandAmount, power);
+    }
  }
 
 

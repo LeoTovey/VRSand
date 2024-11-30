@@ -4,7 +4,9 @@ using Unity.Mathematics;
 
 public interface ICollision
 {
-    Vector3 CenterVelocity { get; }
+    Vector3 Movement { get;}
     Bounds CollisionBound { get; }
-    abstract public bool DetectCollision();
+    public abstract bool DetectCollision();
+    public abstract void ClearMovement();
+
 }

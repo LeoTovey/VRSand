@@ -95,31 +95,25 @@ public class SandSimulation : MonoBehaviour
 
         if (RightHand.CurrentHandPose == HandPose.SkinnyPouring && RightHand.CurrentHandState == HandState.DRAW)
         {
-
-
-            if (RightHand.SandSkinnyPouring.Strength > 0.0f)
+            if (RightHand.SandSkinnyPouring.Strength > 0.0f && RightHand.SandSkinnyPouring.EnablePouring)
             {
- 
                 Bounds bounds = RightHand.HandBound;
-
                 if (IsIntersectXZ(bounds))
                 { 
                     Kernel.SkinnyPouring(bounds, CollisionPlane, RightHand.SandSkinnyPouring.PouringCenter, RightHand.SandSkinnyPouring.SandAmount, SandRadius);
                 }
             }
-
             _hands._poseCounter[RightHand.CurrentHandPose] += Time.fixedDeltaTime;
         }
         else if(RightHand.CurrentHandPose == HandPose.ScatterPouring && RightHand.CurrentHandState == HandState.DRAW)
         {
-            if (RightHand.SandScatterPouring.Strength > 0.0f)
+            if (RightHand.SandScatterPouring.Strength > 0.0f && RightHand.SandScatterPouring.EnablePouring)
             {
                 Bounds bounds = RightHand.ScatterPouringCenter;
                 if (IsIntersectXZ(bounds))
                 {
                     Kernel.ScatterPouring(bounds, CollisionPlane, RightHand.SandScatterPouring.SandAmount);
                 }
-
             }
             _hands._poseCounter[RightHand.CurrentHandPose] += Time.fixedDeltaTime;
         }
@@ -151,10 +145,6 @@ public class SandSimulation : MonoBehaviour
                 _hands._poseCounter[RightHand.CurrentHandPose] += Time.fixedDeltaTime;
             }
         }
-
-
-        
-
     }
 
     bool Displacement(ICollision collision)
@@ -163,10 +153,11 @@ public class SandSimulation : MonoBehaviour
         if (collision.DetectCollision() && IsIntersect(bounds))
         {
             Kernel.CollisionTest(bounds, CollisionPlane, collision);
-            Kernel.Sweep(collision.CenterVelocity);
+            Kernel.Sweep(collision.Movement);
+            
             return true;
         }
-
+        collision.ClearMovement();
         return false;
     }
 }

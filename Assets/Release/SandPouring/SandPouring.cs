@@ -11,8 +11,9 @@ public class SandPouring
     public float[] SandAmount => _sandAmount;
     public float Strength => _strength;
     public Vector3 PouringCenter => _pouringCenter;
-
-
+    
+    public bool EnablePouring = true;
+    
     protected float[] _sandAmount = new float[4];
 
     protected ParticleSystem _sandEffect;
@@ -21,7 +22,7 @@ public class SandPouring
     protected bool _enabled;
     protected float _strength;
     protected Vector3 _pouringCenter;
-
+    
 
     public SandPouring(ParticleSystem sandEffect, LoadingBarSegments loadingSegments)
     {
@@ -58,17 +59,17 @@ public class SandPouring
             _strength = Mathf.Clamp(strength, 0.0f, 1.0f);
             _loadingSegments.SetPercentage(_strength);
             _loadingSegments.transform.position = pouringCenter;
-            if (_strength > 0.0f)
+            if (_strength > 0.0f && EnablePouring)
             {
                 _sandEffect.gameObject.SetActive(true);
                 _pouringCenter = pouringCenter;
                 _sandEffect.gameObject.transform.position = pouringCenter;
                 Color color = sandColor;
                 color.a = _strength * Alpha;
-                _sandAmount[3] = (color.r + color.g + color.b) * _strength * PouringVelocity;
-                _sandAmount[0] = color.r * _strength * PouringVelocity;
-                _sandAmount[1] = color.g * _strength * PouringVelocity;
-                _sandAmount[2] = color.b * _strength * PouringVelocity;
+                _sandAmount[3] = _strength * PouringVelocity;
+                _sandAmount[0] = color.r;
+                _sandAmount[1] = color.g;
+                _sandAmount[2] = color.b;
 
                 OnPouringUpdate(sandColor);
             }

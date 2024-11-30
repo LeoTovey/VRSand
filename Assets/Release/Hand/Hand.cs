@@ -36,17 +36,18 @@ public class Hand : MonoBehaviour, ICollision
 
     public HandPose CurrentHandPose { get; private set; } = HandPose.None;
     public HandState CurrentHandState = HandState.DRAW;
-
+    
+    
 
     public GameObject FingertipTracing;
     public GameObject FingerCarving;
     public GameObject PhysicsMesh;
-
+    
 
     public Bounds HandBound { get; private set; }
     public Vector3 PalmVelocity { get; private set; }
     public Vector3 IndexFingerTipVelocity { get; private set; }
-    public Vector3 CenterVelocity => PalmVelocity;
+    public Vector3 Movement => _movement;
     public Bounds CollisionBound => HandBound;
 
     public bool DetectCollision()
@@ -82,13 +83,22 @@ public class Hand : MonoBehaviour, ICollision
 
     private Vector3 _lastPalmPosition;
     private Vector3 _lastIndexFingerTipPosition;
+    
+    private Vector3 _movement;
+    
+    public bool IsInteracting { get; set; }
+    
+    public void ClearMovement() {_movement = Vector3.zero;}
 
     private HandJointLocations _handJointLocations = new HandJointLocations();
 
     private Dictionary<HandPose, Action> _onHandPoseStart = new Dictionary<HandPose, Action>();
     private Dictionary<HandPose, Action> _onHandPoseUpdate = new Dictionary<HandPose, Action>();
     private Dictionary<HandPose, Action> _onHandPoseEnd = new Dictionary<HandPose, Action>();
-
+    
+    // for pc mode
+    public bool PCMode = false;
+    public float PCScale = 0.5f;
 
     private void Awake()
     {
@@ -97,17 +107,31 @@ public class Hand : MonoBehaviour, ICollision
 
     private void Start()
     {
-        IsValid = false; ;
-        HandMesh.SetActive(false);
-        CurrentHandPose = HandPose.None;
+        IsValid = false;
+        if (PCMode)
+        {
+            HandMesh.SetActive(true);
+        }
+        else
+        {
+            HandMesh.SetActive(false);
+            CurrentHandPose = HandPose.None;
+        }
+
     }
 
-   
-
+    
     private void Update()
     {
-        
-        UpdateHandJoints();
+        if (PCMode)
+        {
+            
+        }
+        else
+        {
+            UpdateHandJoints();
+        }
+
 
         if (CurrentHandPose == HandPose.SkinnyPouring)
         {
@@ -146,11 +170,25 @@ public class Hand : MonoBehaviour, ICollision
         // update velocity
         PalmVelocity = (PalmTransform.position - _lastPalmPosition) / Time.deltaTime;
         IndexFingerTipVelocity = (IndexTipTransform.position - _lastIndexFingerTipPosition) / Time.deltaTime;
+        _movement += PalmTransform.position - _lastPalmPosition;
         _lastPalmPosition = PalmTransform.position;
         _lastIndexFingerTipPosition = IndexTipTransform.position;
-     
     }
 
+    public void UpdateHandJoints(ref List<Transform> updatedHandJoints)
+    {
+        transform.localScale = Vector3.one * PCScale;
+        for (int i = 0; i < handJoints.Count; ++i)
+        {
+            handJoints[i].localPosition = updatedHandJoints[i].localPosition;
+            handJoints[i].localRotation = updatedHandJoints[i].localRotation;
+        }
+    }
+
+    public void SetStrength(float strength)
+    {
+        Strength = strength;
+    }
     private void UpdateHandJoints()
     {
         if (PXR_HandTracking.GetJointLocations(handType, ref _handJointLocations))
@@ -204,7 +242,7 @@ public class Hand : MonoBehaviour, ICollision
             SetIsValid(false);
         }
     }
-
+    
     public void SetIsValid(bool newState)
     {
         if (newState != IsValid)
@@ -243,7 +281,7 @@ public class Hand : MonoBehaviour, ICollision
 
     }
 
-    // TODO: 允许碰撞这一块还有bug！
+    // TODO: ???????????黹??bug??
     /*
     public void SetEnableCollisionTest(bool enableCollision)
     {

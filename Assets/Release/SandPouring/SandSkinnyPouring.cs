@@ -26,8 +26,11 @@ public class SandSkinnyPouring : SandPouring
         main.simulationSpeed = _strength;
 
         _loadingSegments.transform.position = _pouringCenter + new Vector3(0.0f, 0.15f, 0);
-        Vector3 cameraPos = Camera.main.transform.position;
-        _loadingSegments.transform.LookAt(cameraPos);
+        if (Camera.main != null)
+        {
+            Vector3 cameraPos = Camera.main.transform.position;
+            _loadingSegments.transform.LookAt(cameraPos);
+        }
     }
 
 }

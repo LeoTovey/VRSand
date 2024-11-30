@@ -110,6 +110,7 @@ public class ColorCue : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 
     public void OnPointerClick(PointerEventData eventData)
     {
+        Debug.Log("OnPointerClick");
         Vector2 newPosition = 0.5f * ColorCueTransform.rect.size + (eventData.position - (Vector2)ColorCueTransform.position);
         newPosition.y = ColorCueHandleTransform.anchoredPosition.y;
         ColorCueHandleTransform.anchoredPosition = newPosition;

@@ -49,8 +49,7 @@ public class SandSimulationKernel : MonoBehaviour
     public float UpdateArea => _updateArea.Area;
 
     // for simulation
-    public float InitHeight = 0.5f;
-    public float MaxHeight = 1.0f;
+    public float InitHeight;
     public Color InitColor;
 
     private SandPixelArea _updateArea = new SandPixelArea(0, 0, 0, 0);
@@ -58,11 +57,11 @@ public class SandSimulationKernel : MonoBehaviour
 
     private void Start()
     {
-        InitComputeShaderKernel();
-        InitThread();
-
         _collisionMapWidth = CollisionMap.width;
         _collisionMapHeight = CollisionMap.height;
+        InitComputeShaderKernel();
+        InitThread();
+        Init();
 
     }
 
@@ -112,7 +111,7 @@ public class SandSimulationKernel : MonoBehaviour
         World2Pixel(bounds, planeTransform, ref _area);
 
         SandBoardComputeShader.SetInts("StartId", _area.StartId);
-        Vector3 velocity = collision.CenterVelocity;
+        Vector3 velocity = collision.Movement;
         float absX = math.abs(velocity.x) + _epsilon;
         float absY = math.abs(velocity.z) + _epsilon;
         _displacementRatio[0] = absX / (absX + absY);
@@ -279,7 +278,6 @@ public class SandSimulationKernel : MonoBehaviour
 
 
         // params
-        SandBoardComputeShader.SetFloat("MaxHeight", MaxHeight);
         SandBoardComputeShader.SetFloat("InitHeight", InitHeight);
         SandBoardComputeShader.SetFloats("InitColor", new float[] { InitColor.r, InitColor.g, InitColor.b });
         SandBoardComputeShader.SetInts("CollisionMapSize", new int[] { CollisionMap.width, CollisionMap.height });

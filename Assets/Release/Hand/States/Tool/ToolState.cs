@@ -80,7 +80,6 @@ public class PenDrawing : AbstractState
         {
             Hand.PenLoading.SetPercentage(0.0f);
             Hand.CurrentLoadingTime = 0.0f;
-            Hand.Pen.SetVelocity(Hand.PalmVelocity);
             Hand.Pen.transform.position = Hand.PalmTransform.position;
         }
 

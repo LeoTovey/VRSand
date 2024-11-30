@@ -21,27 +21,27 @@ public class CollisionJointController : MonoBehaviour
 
     void Start()
     {
-        int CollisionPlaneLayer = LayerMask.NameToLayer("CollisionPlane");
-        int HandsLayer = LayerMask.NameToLayer("Hands");
-        int ToolsLayer = LayerMask.NameToLayer("Tools");
-        int JointsLayer = LayerMask.NameToLayer("Joints");
-
-        //FingerCarving.SetActive(false);
-        //FingertipTracing.SetActive(false);
-
-        jointCullingMask = 1 << CollisionPlaneLayer | 1 << ToolsLayer | 1 << JointsLayer;
-        handCullingMask = 1 << CollisionPlaneLayer | 1 << ToolsLayer | 1 << HandsLayer;
-        //CollisionCamera.cullingMask = handCullingMask;
-
-        RightHand.BindHandPoseStartCallback(HandPose.FingerCarving, () => {
-            //FingerCarving.SetActive(true);
-            //CollisionCamera.cullingMask = jointCullingMask;
-        });
-
-        RightHand.BindHandPoseEndCallback(HandPose.FingerCarving, () => {
-            //FingerCarving.SetActive(false);
-            //CollisionCamera.cullingMask = handCullingMask;
-        });
+        // int CollisionPlaneLayer = LayerMask.NameToLayer("CollisionPlane");
+        // int HandsLayer = LayerMask.NameToLayer("Hands");
+        // int ToolsLayer = LayerMask.NameToLayer("Tools");
+        // int JointsLayer = LayerMask.NameToLayer("PhysicsMesh");
+        //
+        // FingerCarving.SetActive(false);
+        // FingertipTracing.SetActive(false);
+        //
+        // jointCullingMask = 1 << CollisionPlaneLayer | 1 << ToolsLayer | 1 << JointsLayer;
+        // handCullingMask = 1 << CollisionPlaneLayer | 1 << ToolsLayer | 1 << HandsLayer;
+        // CollisionCamera.cullingMask = handCullingMask;
+        //
+        // RightHand.BindHandPoseStartCallback(HandPose.FingerCarving, () => {
+        //     FingerCarving.SetActive(true);
+        //     CollisionCamera.cullingMask = jointCullingMask;
+        // });
+        //
+        // RightHand.BindHandPoseEndCallback(HandPose.FingerCarving, () => {
+        //     FingerCarving.SetActive(false);
+        //     CollisionCamera.cullingMask = handCullingMask;
+        // });
 
 
     }

@@ -105,7 +105,7 @@ public class AudioController : MonoBehaviour
             }
             
             AudioSource.volume = (AudioSource.volume * 0.8f + Mathf.Lerp(_currentMinVolume, _currentMaxVolume, speed) * 0.2f) ;
-            AudioSource.pitch = Mathf.Lerp(_currentMinPitch, _currentMaxPitch, speed);
+            AudioSource.pitch = (AudioSource.pitch * 0.8f + Mathf.Lerp(_currentMinPitch, _currentMaxPitch, speed) * 0.2f) ; 
         }
         else
         {

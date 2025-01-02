@@ -37,7 +37,7 @@ public class PCHandUIController : MonoBehaviour
             PointerEventData pointer = new PointerEventData(EventSystem.current);
             pointer.position = Input.mousePosition;
             List<RaycastResult> results = new List<RaycastResult>();
-            Raycaster.Raycast(pointer, results);
+            //Raycaster.Raycast(pointer, results);
         }
     }
 

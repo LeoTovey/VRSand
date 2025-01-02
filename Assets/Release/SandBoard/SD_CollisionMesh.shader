@@ -1,4 +1,4 @@
-Shader "Custom/S_CollisionPlaneColor"
+Shader "Custom/S_CollisionPlane"
 {
     SubShader
     {
@@ -7,8 +7,6 @@ Shader "Custom/S_CollisionPlaneColor"
         Pass
         {
             Cull Off
-            ZWrite On
-            ColorMask 0
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
@@ -30,7 +28,7 @@ Shader "Custom/S_CollisionPlaneColor"
             }
             fixed4 frag (v2f i) : SV_Target
             {
-                return fixed4(0,0,0,1);
+                return fixed4(1,1,1,1);
             }
             ENDCG
         }

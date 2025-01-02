@@ -18,6 +18,8 @@ public class PCHandController : MonoBehaviour
     [SerializeField] private Camera Camera;
     [SerializeField] private Collider SandBoardCollider;
     [SerializeField] private Collider HandUICollider;
+    [SerializeField] private Transform ScatterPouringTransform;
+    private float _scatterPouringRadius;
     
     public List<HandPoseMesh> prefabList = new List<HandPoseMesh>();
     private Dictionary<HandPose, AiTipHand> _handJoints = new Dictionary<HandPose, AiTipHand>();
@@ -45,10 +47,31 @@ public class PCHandController : MonoBehaviour
                 HandController.RightHand.UpdateHandJoints(ref _handJoints[pair.handPose].HandJoints);
             });
         }
+        
+        HandController.RightHand.BindHandPoseStartCallback(HandPose.ScatterPouring, () =>
+        {
+            ScatterPouringTransform.gameObject.SetActive(true);
+        });
+        
+        HandController.RightHand.BindHandPoseEndCallback(HandPose.ScatterPouring, () =>
+        {
+            ScatterPouringTransform.gameObject.SetActive(false);
+        });
+        
+        HandController.RightHand.BindHandPoseStartCallback(HandPose.SkinnyPouring, () =>
+        {
+            ScatterPouringTransform.gameObject.SetActive(true);
+        });
+        
+        HandController.RightHand.BindHandPoseEndCallback(HandPose.SkinnyPouring, () =>
+        {
+            ScatterPouringTransform.gameObject.SetActive(false);
+        });
         HandController.RightHand.PCScale = HandScale;
         HandController.RightHand.SetHandPose(HandPose.None);
         HandController.RightHand.UpdateHandJoints(ref _handJoints[HandPose.None].HandJoints);
         _currentHand = _handJoints[HandPose.None];
+        _scatterPouringRadius = ScatterPouringTransform.localScale.z;
     }
     
     void Update()
@@ -57,6 +80,7 @@ public class PCHandController : MonoBehaviour
         HandController.RightHand.SandSkinnyPouring.EnablePouring = HandController.RightHand.IsInteracting;
         HandController.RightHand.SandScatterPouring.EnablePouring = HandController.RightHand.IsInteracting;
         HandController.RightHand.SetStrength(_strength);
+        ScatterPouringTransform.localScale = new Vector3(_scatterPouringRadius, _scatterPouringRadius, _scatterPouringRadius);
 
         // UI 状态
         if (HandController.RightHand.CurrentHandState == HandState.UI)
@@ -81,6 +105,11 @@ public class PCHandController : MonoBehaviour
                 }
             
                 HandController.RightHand.transform.position = handPos;
+                
+                if (ScatterPouringTransform.gameObject.activeSelf)
+                {
+                    ScatterPouringTransform.position = _hit.point;
+                }
             }
         }
         
@@ -129,17 +158,26 @@ public class PCHandController : MonoBehaviour
         var scrollWheelValue = Input.GetAxis("Mouse ScrollWheel");
         if (scrollWheelValue != 0.0f)
         {
-            if (HandController.RightHand.CurrentHandPose == HandPose.SkinnyPouring ||
-                HandController.RightHand.CurrentHandPose == HandPose.ScatterPouring)
+            if (Input.GetKey(KeyCode.A))
             {
-                _strength = _strength - scrollWheelValue;
-                _strength = Mathf.Clamp(_strength, 0.0f, 1.0f);
+                _scatterPouringRadius = _scatterPouringRadius - scrollWheelValue * 0.1f;
+                _scatterPouringRadius = Mathf.Clamp(_scatterPouringRadius, 0.0f, 1.0f);
             }
             else
             {
-                _currentRotationY -= _rotationSpeed * scrollWheelValue;
-                HandController.RightHand.transform.rotation =  Quaternion.Euler(0f, _currentRotationY, 0f);
+                if (HandController.RightHand.CurrentHandPose == HandPose.SkinnyPouring ||
+                    HandController.RightHand.CurrentHandPose == HandPose.ScatterPouring)
+                {
+                    _strength = _strength - scrollWheelValue;
+                    _strength = Mathf.Clamp(_strength, 0.0f, 1.0f);
+                }
+                else
+                {
+                    _currentRotationY -= _rotationSpeed * scrollWheelValue;
+                    HandController.RightHand.transform.rotation =  Quaternion.Euler(0f, _currentRotationY, 0f);
+                }
             }
+
 
         }
 

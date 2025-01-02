@@ -44,8 +44,8 @@ public class SandBoard2D : MonoBehaviour
     private float _sandBoardAspectRatio;
 
     
-    private SandPixelArea _updateArea = new SandPixelArea(0, 0, 0, 0);
-    private SandPixelArea _area = new SandPixelArea(0, 0, 0, 0);
+    private RTPixelAABB _updateArea;
+    private RTPixelAABB _area;
 
     private float[] _sandCenter = new float[2];
     private float[] _sandAmount = new float[4];
@@ -53,7 +53,9 @@ public class SandBoard2D : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        
+        _updateArea = new RTPixelAABB(HeightMap.width, HeightMap.height);
+        _area = new RTPixelAABB(HeightMap.width, HeightMap.height);
+
         _sandBoardAspectRatio = SandBoardTransform.localScale.y / SandBoardTransform.localScale.x;
         
         _threadGroupsX = Mathf.CeilToInt(HeightMap.width / _threadCountX);
@@ -126,7 +128,7 @@ public class SandBoard2D : MonoBehaviour
         }
     }
     
-    public void World2Pixel(Bounds bounds, Transform planeTransform, ref SandPixelArea pixelArea)
+    public void World2Pixel(Bounds bounds, Transform planeTransform, ref RTPixelAABB pixelArea)
     {
         Vector3 localMin = bounds.min - planeTransform.position;
         Vector3 localMax = bounds.max - planeTransform.position;

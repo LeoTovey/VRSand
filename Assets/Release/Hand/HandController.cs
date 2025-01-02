@@ -19,7 +19,7 @@ public class HandController : MonoBehaviour
     [SerializeField] private ParticleSystem _sandSkinny;
     [SerializeField] private LoadingBarSegments _loadingSegments;
     [SerializeField] private SandColorController _sandColorController;
-
+    // used in ai
     public Dictionary<HandPose, float> _poseCounter = new Dictionary<HandPose, float>();
  
     private void Awake()

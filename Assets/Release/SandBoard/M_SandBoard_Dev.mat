@@ -74,7 +74,7 @@ Material:
     - _SandNoiseMediumScale: 1
     - _SandNoiseMediumUVScale: 1
     m_Colors:
-    - _BackGround: {r: 0.9607843, g: 0.87058824, b: 0.7019608, a: 1}
+    - _BackGround: {r: 1, g: 1, b: 1, a: 1}
     - _GlowColor: {r: 1, g: 1, b: 0, a: 1}
     - _SandColor: {r: 0.5566038, g: 0.46639156, b: 0.35006526, a: 1}
     - _SandGround: {r: 0.4433962, g: 0.3587429, b: 0.24958465, a: 1}

@@ -1,5 +1,9 @@
+using KevinCastejon.HierarchicalFiniteStateMachine;
+using Modularify.LoadingBars3D;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 
 public class HandController : MonoBehaviour
@@ -7,17 +11,52 @@ public class HandController : MonoBehaviour
     public Hand LeftHand;
     public Hand RightHand;
 
+    private HandFSM _rightFSM;
+    private HandFSM _leftFSM;
+    public TextMeshProUGUI _text;
+
+    [SerializeField] private ParticleSystem _sandScatter;
+    [SerializeField] private ParticleSystem _sandSkinny;
+    [SerializeField] private LoadingBarSegments _loadingSegments;
+    [SerializeField] private SandColorController _sandColorController;
+    // used in ai
+    public Dictionary<HandPose, float> _poseCounter = new Dictionary<HandPose, float>();
+ 
+    private void Awake()
+    {
+        _rightFSM = AbstractHierarchicalFiniteStateMachine.CreateRootStateMachine<HandFSM>("RightHandStateMachine");
+        _leftFSM = AbstractHierarchicalFiniteStateMachine.CreateRootStateMachine<HandFSM>("LeftHandStateMachine");
+    }
+
     // Start is called before the first frame update
     void Start()
     {
+        _rightFSM.SetHand(RightHand);
+        _rightFSM.OnEnter();
 
+        _leftFSM.SetHand(LeftHand);
+        _leftFSM.OnEnter();
+
+        RightHand.SandScatterPouring = new SandScatterPouring(_sandScatter, _loadingSegments);
+        RightHand.SandSkinnyPouring = new SandSkinnyPouring(_sandSkinny, _loadingSegments);
+
+        foreach (HandPose pose in Enum.GetValues(typeof(HandPose)))
+        {
+            _poseCounter[pose] = 0.0f;
+        }
 
     }
 
     // Update is called once per frame
     void Update()
     {
-
+        _text.text = "Left : "  + _leftFSM.GetCurrentHierarchicalStatesNamesString() + "\n" + "Right : " + _rightFSM.GetCurrentHierarchicalStatesNamesString() + "\n";
+        _leftFSM.OnUpdate();
+        _rightFSM.OnUpdate();
+        LeftHand.CurrentHandState = _leftFSM.GetCurrentStateEnumValue<HandState>();
+        RightHand.CurrentHandState = _rightFSM.GetCurrentStateEnumValue<HandState>();
+        LeftHand.SandColor = _sandColorController.SandColor;
+        RightHand.SandColor = _sandColorController.SandColor;
     }
 
     public void SetLeftHandPose(HandPose handPose)
@@ -64,7 +103,6 @@ public class HandController : MonoBehaviour
         switch (state)
         {
             case HandPose.FingerCarving:
-                //CollisionCamera.cullingMask = jointCullingMask;
                 break;
         }
     }
@@ -74,7 +112,6 @@ public class HandController : MonoBehaviour
         switch (state)
         {
             case HandPose.FingerCarving:
-                //CollisionCamera.cullingMask = handCullingMask;
                 break;
         }
     }

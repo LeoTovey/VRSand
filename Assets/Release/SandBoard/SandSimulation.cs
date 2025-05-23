@@ -14,29 +14,26 @@ public class SandSimulation : MonoBehaviour
 {
     public SandSimulationKernel Kernel;
 
+    public Hand RightHand => _hands.RightHand;
+    public Hand LeftHand => _hands.LeftHand;
 
-    public Hand[] Hands;
-    private List<ICollision> _collisions = new List<ICollision>();
-
-
-    public Pen Pen;
-    public TextMeshProUGUI testMesh;
-
+    [SerializeField] private HandController _hands;
+    [SerializeField] private Camera _collisionRenderingCamera;
+    [SerializeField] private RenderTexture _collisionMap;
+    [SerializeField] private Transform _collisionPlaneTransform;
 
     public RawImage ColorHandleImage;
     public Color SandColor;
 
     public Transform CollisionPlane;
 
-    [SerializeField] private SandScatterPouring _sandScatterPouring;
-    [SerializeField] private SandSkinnyPouring _sandSkinnyPouring;
-
     // for simulation
     public float InitHeight = 0.5f;
     public float MaxHeight = 1.0f;
     public Color InitColor;
 
-    private int SandRadius = 5;
+    private int SkinnyPouringRadius = 5;
+    public Renderer ScatterPouringRenderer;
 
     private Vector3 _collisionPlaneScale => CollisionPlane.lossyScale;
     private Vector3 _collisionPlaneCenter => CollisionPlane.position;
@@ -46,20 +43,28 @@ public class SandSimulation : MonoBehaviour
     private float _planeMinZ => _collisionPlaneCenter.z - _halfHeight;
     private float _planeMaxX => _collisionPlaneCenter.x + _halfWidth;
     private float _planeMaxZ => _collisionPlaneCenter.z + _halfHeight;
+    
 
-
-
+    
+    [SerializeField] private RenderTexture HeightRT;
+    [SerializeField] private RenderTexture CollisionRT;
+    
+    // _updateArea 每次fixed update都需要更新的区域
+    private RTPixelAABB _updateArea;
+    private RTPixelAABB _area;
+    private Vector2 _displacementRatio = new Vector2(0.5f, 0.5f);
+    private bool _finishCollision = false;
+    
     private void Awake()
     {
-        Application.targetFrameRate = -1;
+        //Application.targetFrameRate = -1;
     }
 
     void Start()
     {
-        _collisions.Add(Hands[0]);
-        _collisions.Add(Hands[1]);
-
-
+        _collisionRenderingCamera.clearFlags = CameraClearFlags.Nothing;
+        _updateArea = new RTPixelAABB(HeightRT.width, HeightRT.height);
+        _area = new RTPixelAABB(HeightRT.width, HeightRT.height);
     }
 
     public bool IsIntersect(Bounds bounds)
@@ -76,14 +81,57 @@ public class SandSimulation : MonoBehaviour
         bool isIntersectZ = bounds.min.z < _planeMaxZ && bounds.max.z > _planeMinZ;
         return isIntersectX && isIntersectZ;
     }
+    
+    
 
     void Update()
     {
+        UpdateHandArea(RightHand);
+        UpdateHandArea(LeftHand);
         
+        UpdateCollisionRenderingState();
     }
 
+    void UpdateHandArea(Hand hand)
+    {
+        if (hand.CurrentHandState == HandState.TOOLS && hand.Pen.gameObject.activeSelf)
+        {
+            if (hand.Pen.DetectCollision() && IsIntersect(hand.Pen.CollisionBound))
+            {
+                _updateArea.MergeBounds(hand.Pen.CollisionBound, _collisionPlaneTransform);
+            }
+        }
+        else if (hand.DetectCollision() && IsIntersect(hand.CollisionBound))
+        {
+            _updateArea.MergeBounds(hand.CollisionBound, _collisionPlaneTransform);
+        }
+    }
+
+    void UpdateCollisionRenderingState()
+    {
+        if (_finishCollision)
+        {
+            _collisionRenderingCamera.clearFlags = CameraClearFlags.SolidColor;
+            _finishCollision = false;
+        }
+        else
+        {
+            _collisionRenderingCamera.clearFlags = CameraClearFlags.Nothing;
+        }
+    }
+    
     private void FixedUpdate()
     {
+        if (!_updateArea.IsEmpty())
+        {
+            Kernel.CollisionTest(_updateArea, _displacementRatio);
+            
+            
+            _updateArea.Reset();
+            _finishCollision = true;
+        }
+        
+        
         /*
         if (Hands[0].CurrentHandPose == HandPose.SkinnyPouring && !test)
         {
@@ -99,80 +147,76 @@ public class SandSimulation : MonoBehaviour
         }
         */
 
-        Kernel.ResetUpdateArea();
-
-
-
-        if (Hands[1].CurrentHandPose == HandPose.SkinnyPouring && Hands[1].CurrentHandStatus == HandStatus.Draw)
-        {
-
-
-            if (_sandSkinnyPouring.Strenth > 0.0f)
-            {
- 
-                Bounds bounds = Hands[1].HandBound;
-
-                if (IsIntersectXZ(bounds))
-                { 
- 
-                    Kernel.SkinnyPouring(bounds, CollisionPlane, _sandSkinnyPouring.PouringCenter, _sandSkinnyPouring.SandAmount, SandRadius);
-
-                }
-            }
-
-        }
-        else if(Hands[1].CurrentHandPose == HandPose.ScatterPouring && Hands[1].CurrentHandStatus == HandStatus.Draw)
-        {
-
-            Color color = SandColor;
-            color.a = _sandScatterPouring.Strenth * 0.2f;
-            if (_sandScatterPouring.Strenth > 0.0f)
-            {
-                Bounds bounds = Hands[1].ScatterPouringCenter;
-                if (IsIntersectXZ(bounds))
-                {
-
-
-                    Kernel.ScatterPouring(bounds, CollisionPlane, _sandScatterPouring.SandAmount);
-
-                }
-
-            }
-        }
-        else if (Hands[1].CurrentHandStatus == HandStatus.Tools)
-        {
-            Displacement(Pen);
-            
-        }
-        else
-        {
-            for (int c = 0; c < Hands.Length; c++)
-            {
-                Displacement(Hands[c]);
-            }
-            
-
-        }
-
-        if (Kernel.IsAreaUpdated())
-        {
-            Kernel.Displacement();
-        }
-
-        
-
+        // ResetUpdateArea();
+        //
+        // bool usePen = false;
+        //
+        // if (RightHand.CurrentHandPose == HandPose.SkinnyPouring && RightHand.CurrentHandState == HandState.DRAW)
+        // {
+        //     if (RightHand.SandSkinnyPouring.Strength > 0.0f && RightHand.SandSkinnyPouring.EnablePouring)
+        //     {
+        //         Bounds bounds = RightHand.HandBound;
+        //         if (IsIntersectXZ(bounds))
+        //         { 
+        //             Kernel.SkinnyPouring(bounds, CollisionPlane, ScatterPouringRenderer.transform.position, RightHand.SandSkinnyPouring.SandAmount, SkinnyPouringRadius);
+        //         }
+        //     }
+        //     _hands._poseCounter[RightHand.CurrentHandPose] += Time.fixedDeltaTime;
+        // }
+        // else if(RightHand.CurrentHandPose == HandPose.ScatterPouring && RightHand.CurrentHandState == HandState.DRAW)
+        // {
+        //     if (RightHand.SandScatterPouring.Strength > 0.0f && RightHand.SandScatterPouring.EnablePouring)
+        //     {
+        //         //Bounds bounds = RightHand.ScatterPouringCenter;
+        //         Bounds bounds = ScatterPouringRenderer.bounds;
+        //         if (IsIntersectXZ(bounds))
+        //         {
+        //             Kernel.ScatterPouring(bounds, CollisionPlane, RightHand.SandScatterPouring.SandAmount);
+        //         }
+        //     }
+        //     _hands._poseCounter[RightHand.CurrentHandPose] += Time.fixedDeltaTime;
+        // }
+        // else if (LeftHand.CurrentHandState == HandState.TOOLS && LeftHand.Pen.gameObject.activeSelf)
+        // {
+        //     Displacement(LeftHand.Pen);
+        //     usePen = true;
+        // }
+        // else if (RightHand.CurrentHandState == HandState.TOOLS && RightHand.Pen.gameObject.activeSelf)
+        // {
+        //     Displacement(RightHand.Pen);
+        //     usePen = true;
+        // }
+        // else
+        // {
+        //     Displacement(RightHand);
+        //     Displacement(LeftHand);
+        // }
+        //
+        // if (Kernel.IsAreaUpdated())
+        // {
+        //     Kernel.Displacement();
+        //     if (usePen == true)
+        //     {
+        //         _hands._poseCounter[HandPose.ToolHolding] += Time.fixedDeltaTime;
+        //     }
+        //     else
+        //     {
+        //         _hands._poseCounter[RightHand.CurrentHandPose] += Time.fixedDeltaTime;
+        //     }
+        // }
     }
 
     bool Displacement(ICollision collision)
     {
-        Bounds bounds = collision.CollisionBound;
-        if (collision.DetectCollision() && IsIntersect(bounds))
-        {
-            Kernel.CollisionTest(bounds, CollisionPlane, collision);
-            Kernel.Sweep(collision.CenterVelocity);
-            return true;
-        }
-
+        // Bounds bounds = collision.CollisionBound;
+        // if (collision.DetectCollision() && IsIntersect(bounds))
+        // {
+        //     Kernel.CollisionTest(bounds, CollisionPlane, collision);
+        //     Kernel.Sweep(collision.Movement);
+        //     
+        //     return true;
+        // }
+        // collision.MergeBounds();
         return false;
     }
 }

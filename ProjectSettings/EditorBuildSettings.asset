@@ -5,15 +5,15 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
+  - enabled: 0
     path: Assets/Release/Scenes/HandSand_Dev.unity
     guid: de98de64179def74a8105579c95f6f40
   - enabled: 0
-    path: Assets/_Dev/DataCollection/DataCollection.unity
-    guid: b1188f97551010a4eaf545d177f3f793
-  - enabled: 0
-    path: Assets/_Dev/Joints/HandJoints.unity
-    guid: 2aa7d52a7aef355459ef9c7905e92fd7
+    path: Assets/Release/Scenes/HandSand_Test.unity
+    guid: 5539c13c37eb6ea459d30a4258bb3608
+  - enabled: 1
+    path: Assets/Release/Scenes/HandSandPC_Dev.unity
+    guid: cd1e33f35a6f90f4387cd5e3f813bfa1
   m_configObjects:
     Unity.XR.PXR.Settings: {fileID: 11400000, guid: 135846cdb86143a479a31512ce21cc6c,
       type: 2}

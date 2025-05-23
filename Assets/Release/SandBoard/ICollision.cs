@@ -1,21 +1,12 @@
 ﻿using UnityEngine;
 using Unity.Mathematics;
 
-public enum CollisionType
-{
-    Hand,
-    Tool
-}
 
-public enum CollisionStatus
-{ 
-    Invalid,
-    Valid
-}
 public interface ICollision
 {
-    Vector3 CenterVelocity { get; }
+    Vector3 Movement { get;}
     Bounds CollisionBound { get; }
-    CollisionType CollisionType { get; }
-    abstract public bool DetectCollision();
+    public abstract bool DetectCollision();
+    public abstract void ClearMovement();
+
 }

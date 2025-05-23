@@ -1,6 +1,5 @@
 
 #pragma kernel  Init   
-#pragma kernel  InitWithTexture
 #pragma kernel  CollisionTest            
 #pragma kernel  DisplacementVertical     
 #pragma kernel  DisplacementHorizontal   
@@ -16,13 +15,13 @@
 #define off_L   uint2(-1,0);
 #define off_R   uint2(1,0);
 
-RWTexture2D<float>  Collision;
-RWTexture2D<float4> Height;
+RWTexture2D<float>  CollisionRT;
+RWTexture2D<float4> HeightRT;
 RWTexture2D<float4> OldHeight;
-RWTexture2D<float4> DisplacementHeight;
-RWTexture2D<float4> DisplacementHeightX;
-RWTexture2D<float4> DisplacementHeightY;
-Texture2D<float> InitMap;
+RWTexture2D<float4> DisplacementRT;
+RWTexture2D<float4> DisplacementXRT;
+RWTexture2D<float4> DisplacementYRT;
+
 
 uint    DisplacementRaw;
 uint    DisplacementColumn;
@@ -30,8 +29,8 @@ uint    NextDisplacementRaw;
 uint    NextDisplacementColumn;
 
 uint2   StartId;
-uint2   HeightMapSize;
-uint2   CollisionMapSize;
+uint2   HeightRTSize;
+uint2   CollisionRTSize;
 
 float   MaxHeight;
 float   InitHeight;
@@ -52,46 +51,47 @@ float slopeThreshold;
 //#define one_third 0.33333;
 
 
+float4 MixSandColor(float4 oldValue, float4 newValue, float multiplier)
+{
+    float oldHeight = oldValue.w;
+    float3 oldColor = oldValue.xyz;
+    float3 newColor = newValue.xyz;
+    float newHeight = newValue.w * multiplier;
+    float mixedHeight = oldHeight + newHeight;
+    float3 mixedColor = oldHeight * oldColor + newHeight * newColor;
+    if (mixedHeight > 0)
+    {
+        mixedColor /= mixedHeight;
+        mixedHeight = clamp(mixedHeight, 0.0f, 1.0f);
+    }
+    return float4(mixedColor, mixedHeight);
+}
+
+
 [numthreads(8,8,1)]
 void Init (uint3 DispatchThreadID : SV_DispatchThreadID)
 {
-    float rgbSum = InitColor.r + InitColor.g + InitColor.b;
-    float rSand = InitHeight * InitColor.r / rgbSum;
-    float gSand = InitHeight * InitColor.g / rgbSum;
-    float bSand = InitHeight * InitColor.b / rgbSum;
-    Height[DispatchThreadID.xy] = float4(0.0, 0.0, 0.0, InitHeight);
-    DisplacementHeightX[DispatchThreadID.xy] = 0;
-    DisplacementHeightY[DispatchThreadID.xy] = 0;
+    HeightRT[DispatchThreadID.xy] = float4(InitColor.rgb, InitHeight);
+    DisplacementXRT[DispatchThreadID.xy] = 0;
+    DisplacementYRT[DispatchThreadID.xy] = 0;
 }
-
-[numthreads(8,8,1)]
-void InitWithTexture (uint3 DispatchThreadID : SV_DispatchThreadID)
-{
-    float4 pixel = InitMap.Load(int3(DispatchThreadID.xy, 0));
-    if (pixel.r < 0.8)
-    {
-        Height[DispatchThreadID.xy] = float4(0.0, 0.0, 0.0, 1.0 - pixel.r);
-    }
-    DisplacementHeightX[DispatchThreadID.xy] = 0;
-    DisplacementHeightY[DispatchThreadID.xy] = 0;
-}
-
 
 [numthreads(8, 8, 1)]
 void CollisionTest(uint3 DispatchThreadID : SV_DispatchThreadID)
 {
     uint2 id = uint2(DispatchThreadID.x + StartId.x, DispatchThreadID.y + StartId.y);
-    uint2 collisonMapId = uint2(id.x, CollisionMapSize.y - id.y - 1);
-    float collisionTag = Collision[collisonMapId];
+    uint2 collisionRTId = uint2(id.x, CollisionRTSize.y - id.y - 1);
+    float collisionValue = CollisionRT[collisionRTId];
 
-    if (collisionTag > 0.0001)
+    if (collisionValue > 0.0001)
     {
-        float4 height = Height[id];
-        DisplacementHeightY[id] = height * DisplacementRatio.y;
-        DisplacementHeightX[id] = height * DisplacementRatio.x;
-        Height[id] = 0;
+        float4 height = HeightRT[id];
+        float3 sandColor =  height.xyz;
+        float sandHeight = height.w;
+        DisplacementYRT[id] = float4(sandColor, sandHeight * DisplacementRatio.y);
+        DisplacementXRT[id] = float4(sandColor, sandHeight * DisplacementRatio.x);
+        HeightRT[id] = 0;
     }
-
 }
 
 
@@ -101,11 +101,11 @@ void CollisionTest(uint3 DispatchThreadID : SV_DispatchThreadID)
  {
     uint2 id = uint2(DispatchThreadID.x + StartId.x, DisplacementRaw);
     uint2 nextId = uint2(DispatchThreadID.x + StartId.x, NextDisplacementRaw);
-    uint2 collisonMapId = uint2(id.x, CollisionMapSize.y - id.y - 1);
-    if (Collision[collisonMapId] > 0.0)
+    uint2 collisonMapId = uint2(id.x, CollisionRTSize.y - id.y - 1);
+    if (CollisionRT[collisonMapId] > 0.0)
     {
-        DisplacementHeightY[nextId] += DisplacementHeightY[id];
-        DisplacementHeightY[id] = 0;
+        DisplacementYRT[nextId] = MixSandColor(DisplacementYRT[nextId], DisplacementYRT[id], 1.0f);
+        DisplacementYRT[id] = 0;
     }
  }
 
@@ -114,11 +114,11 @@ void CollisionTest(uint3 DispatchThreadID : SV_DispatchThreadID)
  {
     uint2 id = uint2(DisplacementColumn, DispatchThreadID.y + StartId.y);
     uint2 nextId = uint2(NextDisplacementColumn, DispatchThreadID.y + StartId.y);
-    uint2 collisonMapId = uint2(id.x, CollisionMapSize.y - id.y - 1);
-    if (Collision[collisonMapId] > 0.0)
+    uint2 collisonMapId = uint2(id.x, CollisionRTSize.y - id.y - 1);
+    if (CollisionRT[collisonMapId] > 0.0)
     {
-        DisplacementHeightX[nextId] += DisplacementHeightX[id];
-        DisplacementHeightX[id] = 0;
+        DisplacementXRT[nextId] = MixSandColor(DisplacementXRT[nextId], DisplacementXRT[id], 1.0f);
+        DisplacementXRT[id] = 0;
     }
  }
 
@@ -126,16 +126,16 @@ void CollisionTest(uint3 DispatchThreadID : SV_DispatchThreadID)
  void Displacement(uint3 DispatchThreadID : SV_DispatchThreadID, uint3 GroupID : SV_GroupID)
  {
     uint2 id = uint2(DispatchThreadID.x + StartId.x, DispatchThreadID.y + StartId.y);
-    Height[id] += DisplacementHeightY[id] + DisplacementHeightX[id];
-    Height[id] = clamp(Height[id], 0.0, MaxHeight);
-    DisplacementHeightY[id] = 0;
-    DisplacementHeightX[id] = 0;
+    float4 displacement = MixSandColor(DisplacementXRT[id], DisplacementYRT[id], 1.0f);
+    HeightRT[id] = MixSandColor(HeightRT[id], displacement, 1.0f);
+    DisplacementYRT[id] = 0;
+    DisplacementXRT[id] = 0;
  }
 
  [numthreads(8, 8, 1)]
  void Erosion(uint3 id : SV_DispatchThreadID, uint3 GroupID : SV_GroupID)
  {
-    float4 currentPixel = Height[id.xy];
+    float4 currentPixel = HeightRT[id.xy];
     float threshold = 0.1; 
     float4 sum = currentPixel;
     int count = 1;
@@ -147,7 +147,7 @@ void CollisionTest(uint3 DispatchThreadID : SV_DispatchThreadID)
             uint2 neighborCoord = id.xy + uint2(x, y);
             if (x != 0 || y != 0) 
             {
-                float4 neighbor = Height[neighborCoord];
+                float4 neighbor = HeightRT[neighborCoord];
                 float diff = length(neighbor - currentPixel);
                 if (diff > threshold) 
                 {
@@ -158,7 +158,7 @@ void CollisionTest(uint3 DispatchThreadID : SV_DispatchThreadID)
         }
     }
 
-    Height[id.xy] = sum / count;
+    HeightRT[id.xy] = sum / count;
 
  }
 
@@ -284,14 +284,16 @@ void CollisionTest(uint3 DispatchThreadID : SV_DispatchThreadID)
 
 
 
+
  [numthreads(8, 8, 1)]
  void SkinnyPouring(uint3 DispatchThreadID : SV_DispatchThreadID, uint3 GroupID : SV_GroupID)
  {
     uint2 id = uint2(DispatchThreadID.x + StartId.x, DispatchThreadID.y + StartId.y);
     float dist = distance(SandCenter, id);
-    float power = saturate(1.0 - dist / SandRadius);
-    Height[id] += SandAmount * power;
-    Height[id] = clamp(Height[id], 0.0, MaxHeight);
+    if (dist < SandRadius)
+    {
+        HeightRT[id] = MixSandColor(HeightRT[id], SandAmount, 1.0);
+    }
  }
 
  [numthreads(8, 8, 1)]
@@ -299,9 +301,11 @@ void CollisionTest(uint3 DispatchThreadID : SV_DispatchThreadID)
  {
     uint2 id = uint2(DispatchThreadID.x + StartId.x, DispatchThreadID.y + StartId.y);
     float dist = distance(id, SandCenter);
-    float power = saturate(1.0 - dist / SandRadius);
-    Height[id] += SandAmount * power;
-    Height[id] = clamp(Height[id], 0.0, MaxHeight);
+    if (dist < SandRadius)
+    {
+        float power = saturate(1.0 - dist / SandRadius);
+        HeightRT[id] = MixSandColor(HeightRT[id], SandAmount, power);
+    }
  }
 
 

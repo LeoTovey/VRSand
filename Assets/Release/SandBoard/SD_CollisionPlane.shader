@@ -1,4 +1,4 @@
-Shader "Custom/S_CollisionPlane"
+Shader "Custom/S_CollisionPlaneColor"
 {
     SubShader
     {
@@ -7,6 +7,8 @@ Shader "Custom/S_CollisionPlane"
         Pass
         {
             Cull Off
+            ZWrite On
+            ColorMask 0
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag

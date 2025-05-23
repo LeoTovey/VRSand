@@ -791,6 +791,7 @@ PlayerSettings:
   webGLPowerPreference: 2
   scriptingDefineSymbols:
     Android: UNITY_CCU;CURVEDUI_TMP;CURVEDUI_UNITY_XR
+    Standalone: UNITY_CCU;CURVEDUI_UNITY_XR;CURVEDUI_TMP
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:

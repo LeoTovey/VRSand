@@ -53,10 +53,28 @@ Material:
     - _HeightMap_TexelSize: 1
     - _HeightMap_TexelSize_X: 0.0005
     - _HeightMap_TexelSize_Y: 0.0005
-    - _InitHeight: 1
+    - _InitHeight: 0
+    - _Noise1StartMixThickness: 0.2
+    - _Noise2StartMixThickness: 0.4
+    - _Noise3StartMixThickness: 0.6
+    - _Noise4StartMixThickness: 0.8
     - _ParallaxScale: 0.001
+    - _SandNoise1Scale: 1
+    - _SandNoise1UVScale: 10
+    - _SandNoise2Scale: 1
+    - _SandNoise2UVScale: 10
+    - _SandNoise3Scale: 1
+    - _SandNoise3UVScale: 10
+    - _SandNoise4Scale: 1
+    - _SandNoise4UVScale: 10
+    - _SandNoiseHighScale: 1
+    - _SandNoiseHighUVScale: 1
+    - _SandNoiseLowScale: 1
+    - _SandNoiseLowUVScale: 1
+    - _SandNoiseMediumScale: 1
+    - _SandNoiseMediumUVScale: 1
     m_Colors:
-    - _BackGround: {r: 0.9607843, g: 0.87058824, b: 0.7019608, a: 1}
+    - _BackGround: {r: 1, g: 1, b: 1, a: 1}
     - _GlowColor: {r: 1, g: 1, b: 0, a: 1}
     - _SandColor: {r: 0.5566038, g: 0.46639156, b: 0.35006526, a: 1}
     - _SandGround: {r: 0.4433962, g: 0.3587429, b: 0.24958465, a: 1}

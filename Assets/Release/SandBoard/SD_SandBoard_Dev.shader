@@ -10,10 +10,27 @@ Shader"Custom/S_SandBoardShader"
         _GlowColor("Glow Color",Color) = (1,1,0,1)
         _HeightMap_TexelSize_X("HeightMap TexelSize X", float) = 1.0
         _HeightMap_TexelSize_Y("HeightMap TexelSize Y", float) = 1.0
+        
         _GranularMap02("GranularMap Level02", 2D) = "black" {}
         _GranularMap04("GranularMap Level04", 2D) = "black" {}
         _GranularMap06("GranularMap Level06", 2D) = "black" {}
         _GranularMap08("GranularMap Level08", 2D) = "black" {}
+        
+        _Noise1StartMixThickness ("Noise 1 Start Mix Thickness", Float) = 0.2
+        _Noise2StartMixThickness ("Noise 2 Start Mix Thickness", Float) = 0.4
+        _Noise3StartMixThickness ("Noise 3 Start Mix Thickness", Float) = 0.6
+        _Noise4StartMixThickness ("Noise 4 Start Mix Thickness", Float) = 0.8
+
+        _SandNoise1Scale ("Sand Noise 1 Scale", Float) = 1.0
+        _SandNoise2Scale ("Sand Noise 2 Scale", Float) = 1.0
+        _SandNoise3Scale ("Sand Noise 3 Scale", Float) = 1.0
+        _SandNoise4Scale ("Sand Noise 4 Scale", Float) = 1.0
+        
+        _SandNoise1UVScale ("Sand Noise 1 UV Scale", Float) = 1.0
+        _SandNoise2UVScale ("Sand Noise 2 UV Scale", Float) = 1.0
+        _SandNoise3UVScale ("Sand Noise 3 UV Scale", Float) = 1.0
+        _SandNoise4UVScale ("Sand Noise 4 UV Scale", Float) = 1.0
+        
         _ParallaxScale("Parallax Scale", float) = 1
     }
         SubShader
@@ -74,6 +91,22 @@ Shader"Custom/S_SandBoardShader"
             float _HeightMap_TexelSize_X;
             float _HeightMap_TexelSize_Y;
             float _ParallaxScale;
+            
+            float _Noise1StartMixThickness;
+            float _Noise2StartMixThickness;
+            float _Noise3StartMixThickness;
+            float _Noise4StartMixThickness;
+
+            float _SandNoise1Scale;
+            float _SandNoise2Scale;
+            float _SandNoise3Scale;
+            float _SandNoise4Scale;
+
+            float _SandNoise1UVScale;
+            float _SandNoise2UVScale;
+            float _SandNoise3UVScale;
+            float _SandNoise4UVScale;
+            
 
             float3 InitializeFragmentNormal(float2 uv) 
             {
@@ -144,14 +177,8 @@ Shader"Custom/S_SandBoardShader"
                 //float intensity = abs(sin(_Time.y)) * 0.5 + 0.5;
                 //half3 backColor = lerp(_BackGround.rgb, _GlowColor.rgb, intensity);
                 half4 height = tex2D(_HeightMap, uv).rgba;
-                //half3 sandColor = half3(0.0, 0.0, 0.0);
-
-                if (height.a > 0.0)
-                {
-                    //sandColor = height.rgb / height.a;
-                }
-
-
+                half3 sandColor = height.rgb;
+                
 
                 if(texCoords.x > 1.0 || texCoords.y > 1.0 || texCoords.x < 0.0 || texCoords.y < 0.0)
                     discard;
@@ -159,34 +186,50 @@ Shader"Custom/S_SandBoardShader"
 
      
                 half sandHeight = clamp(height.a, 0.0, 1.0);
+                // sandHeight = uv.y;
+                // sandColor = float3(0.0, 0.0, 0.0);
+                float mixRatio1 = saturate(sandHeight  / _Noise1StartMixThickness);
+                float mixRatio2 = saturate((sandHeight - _Noise1StartMixThickness) / (_Noise2StartMixThickness - _Noise1StartMixThickness));
+                float mixRatio3 = saturate((sandHeight - _Noise2StartMixThickness) / (_Noise3StartMixThickness - _Noise2StartMixThickness));
+                float mixRatio4 = saturate((sandHeight - _Noise3StartMixThickness) / (_Noise4StartMixThickness - _Noise3StartMixThickness));
                 
+                float2 noiseUV = uv;
+                fixed4 noise1 = tex2D (_GranularMap02, noiseUV * _SandNoise1UVScale * sandHeight) * _SandNoise1Scale;
+                fixed4 noise2 = tex2D (_GranularMap04, noiseUV * _SandNoise2UVScale * sandHeight) * _SandNoise2Scale;
+                fixed4 noise3 = tex2D (_GranularMap06, noiseUV * _SandNoise3UVScale * sandHeight) * _SandNoise3Scale;
+                fixed4 noise4 = tex2D (_GranularMap08, noiseUV * _SandNoise4UVScale * sandHeight) * _SandNoise4Scale;
 
+                float noise = mixRatio1 * noise1 + mixRatio2 * noise2 + mixRatio3 * noise3 + mixRatio4 * noise4;
                 //half3 noise = tex2D(_GranularMap02, uv).rgb;
 
-                half3 noise = half3(0, 0, 0);
+                //half3 noise = half3(0, 0, 0);
 
-                if (sandHeight > 0.8)
-                {
-                    noise += tex2D(_GranularMap08, uv).rgb;
-                }
-                else if(sandHeight > 0.6)
-                {
-                    noise += tex2D(_GranularMap06, uv).rgb;
-                }
-                else if(sandHeight > 0.4)
-                {
-                    noise += tex2D(_GranularMap04, uv).rgb;
-                }
-
-                if (sandHeight > 0.0)
-                {
-                    noise += tex2D(_GranularMap08, uv).rgb;
-                }
+                // if (sandHeight > 0.8)
+                // {
+                //     noise += tex2D(_GranularMap08, uv).rgb;
+                // }
+                // else if(sandHeight > 0.6)
+                // {
+                //     noise += tex2D(_GranularMap06, uv).rgb;
+                // }
+                // else if(sandHeight > 0.4)
+                // {
+                //     noise += tex2D(_GranularMap04, uv).rgb;
+                // }
+                //
+                // if (sandHeight > 0.0)
+                // {
+                //     noise += tex2D(_GranularMap08, uv).rgb;
+                // }
     
                 noise = clamp(noise, 0.0, 1.0);
                 
                 //half3 finalColor = lerp(_BackGround, sandColor, sandHeight * noise.r);
-                half3 finalColor = lerp(_BackGround, _SandColor, sandHeight * noise.r);
+                //half3 finalColor = lerp(_BackGround, _SandColor, sandHeight * noise.r);
+
+                sandHeight *= noise;
+
+                half3 finalColor = _BackGround.rgb * (1.0 - sandHeight) + sandHeight * sandColor;
 
                 half4 tags = tex2D( _DisplacementHeightMap, uv).rgba;
                 half4 color = half4(finalColor, 1.0) + tags;

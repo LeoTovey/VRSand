@@ -18,16 +18,15 @@ public class OuputController : MonoBehaviour
     {
         if (LeftHand.CurrentHandPose == HandPose.ToolHolding)
         {
-            // ±£´æRender TextureÖÐµÄÄÚÈÝÎªÎÆÀí
+            // ï¿½ï¿½ï¿½ï¿½Render Textureï¿½Ðµï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½
             Texture2D texture = new Texture2D(renderTexture.width, renderTexture.height, TextureFormat.RGBAFloat, false);
             RenderTexture.active = renderTexture;
             texture.ReadPixels(new Rect(0, 0, renderTexture.width, renderTexture.height), 0, 0);
             texture.Apply();
-
-
+            
             string fileName = "OutputImage_" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".jpg";
 
-            // ±£´æÎªJPGÎÄ¼þ
+            // ï¿½ï¿½ï¿½ï¿½ÎªJPGï¿½Ä¼ï¿½
             byte[] bytes = texture.EncodeToJPG();
             File.WriteAllBytes(Path.Combine(Application.persistentDataPath, fileName), bytes);
             test = 1;
